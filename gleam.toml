@@ -1,0 +1,20 @@
+name = "weft_lustre_ui"
+version = "0.1.0"
+description = "UI kit for weft_lustre — headless + styled components"
+licences = ["Apache-2.0"]
+repository = { type = "github", user = "brettbonner", repo = "weft_lustre_ui" }
+gleam = ">= 1.14.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0"
+lustre = ">= 5.0.0 and < 6.0.0"
+weft = { path = "../weft" }
+weft_lustre = { path = "../weft_lustre" }
+
+[dev-dependencies]
+startest = ">= 0.8.0"
+
+[documentation]
+pages = [
+  { title = "Technical Specification", path = "SPEC.md" },
+]
