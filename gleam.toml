@@ -16,5 +16,5 @@ startest = ">= 0.8.0"
 
 [documentation]
 pages = [
-  { title = "Technical Specification", path = "SPEC.md" },
+  { title = "Technical Specification", path = "SPEC.md", source = "SPEC.md" },
 ]
