@@ -717,7 +717,7 @@ cat > "$SCRATCH_DIR/index.html" <<EOF
   <body>
     <main id="app"></main>
     <script type="module">
-      import { main } from "./build/dev/javascript/$PACKAGE_NAME/$PACKAGE_NAME.mjs";
+      import { main } from "./build/dev/javascript/$PACKAGE_NAME/main.mjs";
       main();
     </script>
   </body>
