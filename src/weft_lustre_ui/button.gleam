@@ -195,7 +195,7 @@ fn base_styles(
       y: weft.px(pixels: 1),
       blur: weft.px(pixels: 2),
       spread: weft.px(pixels: 0),
-      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.1),
+      color: theme.button_shadow_base(t),
     )
 
   let interaction_styles = case disabled {
@@ -211,7 +211,7 @@ fn base_styles(
             y: weft.px(pixels: 4),
             blur: weft.px(pixels: 12),
             spread: weft.px(pixels: -2),
-            color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.16),
+            color: theme.button_shadow_hover(t),
           ),
         ]),
       ]),

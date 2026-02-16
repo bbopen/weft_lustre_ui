@@ -20,6 +20,12 @@ pub opaque type Theme {
     input_surface: #(weft.Color, weft.Color),
     overlay_surface: #(weft.Color, weft.Color),
     border_color: weft.Color,
+    button_shadow_base: weft.Color,
+    button_shadow_hover: weft.Color,
+    tooltip_shadow: weft.Color,
+    dialog_shadow: weft.Color,
+    toast_shadow: weft.Color,
+    toast_close_button_background: weft.Color,
     muted_text: weft.Color,
     focus_ring_color: weft.Color,
     scrim: weft.Color,
@@ -116,6 +122,17 @@ pub fn theme_default() -> Theme {
       weft.rgb(red: 255, green: 255, blue: 255),
     ),
     border_color: weft.rgb(red: 229, green: 231, blue: 235),
+    button_shadow_base: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.1),
+    button_shadow_hover: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.16),
+    tooltip_shadow: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.25),
+    dialog_shadow: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.35),
+    toast_shadow: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.35),
+    toast_close_button_background: weft.rgba(
+      red: 0,
+      green: 0,
+      blue: 0,
+      alpha: 0.0,
+    ),
     muted_text: weft.rgba(red: 17, green: 24, blue: 39, alpha: 0.75),
     focus_ring_color: weft.rgb(red: 59, green: 130, blue: 246),
     scrim: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.5),
@@ -213,6 +230,41 @@ pub fn theme_space_md(theme theme: Theme, pixels pixels: Int) -> Theme {
   Theme(..theme, space_md: clamp_non_negative_int(pixels))
 }
 
+/// Set the button shadow colors (`base` for normal state, `hover` for hover state).
+pub fn theme_button_shadows(
+  theme theme: Theme,
+  base base: weft.Color,
+  hover hover: weft.Color,
+) -> Theme {
+  Theme(..theme, button_shadow_base: base, button_shadow_hover: hover)
+}
+
+/// Set the tooltip shadow color.
+pub fn theme_tooltip_shadow(
+  theme theme: Theme,
+  color color: weft.Color,
+) -> Theme {
+  Theme(..theme, tooltip_shadow: color)
+}
+
+/// Set the dialog shadow color.
+pub fn theme_dialog_shadow(theme theme: Theme, color color: weft.Color) -> Theme {
+  Theme(..theme, dialog_shadow: color)
+}
+
+/// Set the toast shadow color.
+pub fn theme_toast_shadow(theme theme: Theme, color color: weft.Color) -> Theme {
+  Theme(..theme, toast_shadow: color)
+}
+
+/// Set the default close-button background color for toast actions.
+pub fn theme_toast_close_button_background(
+  theme theme: Theme,
+  color color: weft.Color,
+) -> Theme {
+  Theme(..theme, toast_close_button_background: color)
+}
+
 /// Set the default disabled opacity used by components.
 ///
 /// The value is clamped to `[0, 1]` and defaults to `0.6` if invalid.
@@ -303,6 +355,54 @@ pub fn overlay_surface(theme: Theme) -> #(weft.Color, weft.Color) {
 pub fn border_color(theme: Theme) -> weft.Color {
   case theme {
     Theme(border_color:, ..) -> border_color
+  }
+}
+
+/// Internal: get the normal button shadow color.
+@internal
+pub fn button_shadow_base(theme: Theme) -> weft.Color {
+  case theme {
+    Theme(button_shadow_base:, ..) -> button_shadow_base
+  }
+}
+
+/// Internal: get the hover button shadow color.
+@internal
+pub fn button_shadow_hover(theme: Theme) -> weft.Color {
+  case theme {
+    Theme(button_shadow_hover:, ..) -> button_shadow_hover
+  }
+}
+
+/// Internal: get the tooltip shadow color.
+@internal
+pub fn tooltip_shadow(theme: Theme) -> weft.Color {
+  case theme {
+    Theme(tooltip_shadow:, ..) -> tooltip_shadow
+  }
+}
+
+/// Internal: get the dialog shadow color.
+@internal
+pub fn dialog_shadow(theme: Theme) -> weft.Color {
+  case theme {
+    Theme(dialog_shadow:, ..) -> dialog_shadow
+  }
+}
+
+/// Internal: get the toast shadow color.
+@internal
+pub fn toast_shadow(theme: Theme) -> weft.Color {
+  case theme {
+    Theme(toast_shadow:, ..) -> toast_shadow
+  }
+}
+
+/// Internal: get toast close-button background color.
+@internal
+pub fn toast_close_button_background(theme: Theme) -> weft.Color {
+  case theme {
+    Theme(toast_close_button_background:, ..) -> toast_close_button_background
   }
 }
 

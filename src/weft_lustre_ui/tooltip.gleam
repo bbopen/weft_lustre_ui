@@ -104,7 +104,7 @@ fn base_styles(t: theme.Theme) -> List(weft.Attribute) {
       y: weft.px(pixels: 8),
       blur: weft.px(pixels: 24),
       spread: weft.px(pixels: -6),
-      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.25),
+      color: theme.tooltip_shadow(t),
     )
 
   [

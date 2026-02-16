@@ -179,7 +179,7 @@ fn toast_styles(variant: Variant, t: theme.Theme) -> List(weft.Attribute) {
       y: weft.px(pixels: 10),
       blur: weft.px(pixels: 28),
       spread: weft.px(pixels: -10),
-      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.35),
+      color: theme.toast_shadow(t),
     )
 
   [
@@ -210,7 +210,7 @@ fn close_button(t: theme.Theme, on_dismiss: msg) -> weft_lustre.Element(msg) {
     weft.justify_content(value: weft.justify_center()),
     weft.padding_xy(x: pad, y: pad),
     weft.rounded(radius: weft.px(pixels: 9999)),
-    weft.background(color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)),
+    weft.background(color: theme.toast_close_button_background(t)),
     weft.cursor(cursor: weft.cursor_pointer()),
     weft.user_select(value: weft.user_select_none()),
     weft.appearance(value: weft.appearance_none()),
