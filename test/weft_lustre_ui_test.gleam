@@ -10,23 +10,31 @@ import weft_lustre
 import weft_lustre/overlay
 
 import weft_lustre_ui/button as ui_button
+import weft_lustre_ui/card as ui_card
 import weft_lustre_ui/checkbox as ui_checkbox
 import weft_lustre_ui/dialog as ui_dialog
 import weft_lustre_ui/field as ui_field
 import weft_lustre_ui/forms as ui_forms
 import weft_lustre_ui/headless/button as headless_button
+import weft_lustre_ui/headless/card as headless_card
 import weft_lustre_ui/headless/checkbox as headless_checkbox
 import weft_lustre_ui/headless/dialog as headless_dialog
 import weft_lustre_ui/headless/field as headless_field
 import weft_lustre_ui/headless/forms as headless_forms
 import weft_lustre_ui/headless/input as headless_input
+import weft_lustre_ui/headless/label as headless_label
 import weft_lustre_ui/headless/link as headless_link
 import weft_lustre_ui/headless/radio as headless_radio
+import weft_lustre_ui/headless/separator as headless_separator
+import weft_lustre_ui/headless/skeleton as headless_skeleton
 import weft_lustre_ui/headless/toast as headless_toast
 import weft_lustre_ui/headless/tooltip as headless_tooltip
 import weft_lustre_ui/input as ui_input
+import weft_lustre_ui/label as ui_label
 import weft_lustre_ui/link as ui_link
 import weft_lustre_ui/radio as ui_radio
+import weft_lustre_ui/separator as ui_separator
+import weft_lustre_ui/skeleton as ui_skeleton
 import weft_lustre_ui/theme
 import weft_lustre_ui/toast as ui_toast
 import weft_lustre_ui/tooltip as ui_tooltip
@@ -414,8 +422,258 @@ pub fn weft_lustre_ui_tests() {
         string.contains(rendered, "required")
         |> expect.to_equal(expected: True)
       }),
+      it("label links control with for attribute", fn() {
+        let view =
+          headless_label.label(
+            config: headless_label.label_config()
+              |> headless_label.label_for(html_for: "field-name"),
+            child: weft_lustre.text(content: "Name"),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "<label")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "for=\"field-name\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("card sections render semantic tags", fn() {
+        let view =
+          headless_card.card(attrs: [], children: [
+            headless_card.card_header(attrs: [], children: [
+              headless_card.card_title(attrs: [], children: [
+                weft_lustre.text(content: "Title"),
+              ]),
+              headless_card.card_action(attrs: [], children: [
+                weft_lustre.text(content: "Action"),
+              ]),
+            ]),
+            headless_card.card_description(attrs: [], children: [
+              weft_lustre.text(content: "Description"),
+            ]),
+            headless_card.card_content(attrs: [], children: [
+              weft_lustre.text(content: "Content"),
+            ]),
+            headless_card.card_footer(attrs: [], children: [
+              weft_lustre.text(content: "Footer"),
+            ]),
+          ])
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "<div")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "<h3")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "<p")
+        |> expect.to_equal(expected: True)
+      }),
+      it("separator emits accessibility affordances by mode", fn() {
+        let decorative =
+          headless_separator.separator(
+            config: headless_separator.separator_config()
+            |> headless_separator.separator_decorative(decorative: True),
+          )
+
+        let informative =
+          headless_separator.separator(
+            config: headless_separator.separator_config()
+            |> headless_separator.separator_decorative(decorative: False)
+            |> headless_separator.separator_orientation(
+              orientation: headless_separator.separator_vertical(),
+            ),
+          )
+
+        let decorative_html =
+          weft_lustre.layout(attrs: [], child: decorative)
+          |> element.to_string
+
+        let informative_html =
+          weft_lustre.layout(attrs: [], child: informative)
+          |> element.to_string
+
+        string.contains(decorative_html, "aria-hidden=\"true\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(decorative_html, "role=\"separator\"")
+        |> expect.to_equal(expected: False)
+
+        string.contains(informative_html, "role=\"separator\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(informative_html, "aria-hidden=\"true\"")
+        |> expect.to_equal(expected: False)
+      }),
+      it("skeleton returns configured metadata", fn() {
+        let cfg =
+          headless_skeleton.skeleton_config()
+          |> headless_skeleton.skeleton_width(width: weft.px(pixels: 120))
+          |> headless_skeleton.skeleton_height(height: weft.px(pixels: 16))
+          |> headless_skeleton.skeleton_radius(radius: weft.px(pixels: 6))
+
+        let rendered =
+          weft_lustre.layout(
+            attrs: [],
+            child: headless_skeleton.skeleton(config: cfg),
+          )
+          |> element.to_string
+
+        string.contains(rendered, "<span")
+        |> expect.to_equal(expected: True)
+
+        let width = headless_skeleton.skeleton_config_width(config: cfg)
+        let height = headless_skeleton.skeleton_config_height(config: cfg)
+        let radius = headless_skeleton.skeleton_config_radius(config: cfg)
+
+        width
+        |> expect.to_equal(expected: Some(weft.px(pixels: 120)))
+
+        height
+        |> expect.to_equal(expected: Some(weft.px(pixels: 16)))
+
+        radius
+        |> expect.to_equal(expected: Some(weft.px(pixels: 6)))
+      }),
     ]),
     describe("styled", [
+      it("card uses theme colors and semantic title tag", fn() {
+        let t =
+          theme.theme_default()
+          |> theme.theme_surface(
+            color: weft.rgb(red: 12, green: 34, blue: 56),
+            on_color: weft.rgb(red: 210, green: 220, blue: 230),
+          )
+
+        let view =
+          ui_card.card(theme: t, attrs: [], children: [
+            ui_card.card_title(theme: t, attrs: [], children: [
+              weft_lustre.text(content: "Card title"),
+            ]),
+            ui_card.card_description(theme: t, attrs: [], children: [
+              weft_lustre.text(content: "Card description"),
+            ]),
+            ui_card.card_content(theme: t, attrs: [], children: [
+              weft_lustre.text(content: "Card content"),
+            ]),
+          ])
+
+        let html =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        string.contains(html, "<h3")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "background-color:rgb(12, 34, 56);")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "color:rgb(210, 220, 230);")
+        |> expect.to_equal(expected: True)
+      }),
+      it("styled label applies disabled semantics", fn() {
+        let t =
+          theme.theme_default()
+          |> theme.theme_disabled_opacity(opacity: 0.23)
+
+        let view =
+          ui_label.label(
+            theme: t,
+            config: ui_label.label_config()
+              |> ui_label.label_for(html_for: "label-control")
+              |> ui_label.label_disabled(),
+            child: weft_lustre.text(content: "Label"),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        string.contains(rendered, "for=\"label-control\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "cursor:not-allowed;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "opacity:0.23;")
+        |> expect.to_equal(expected: True)
+      }),
+      it("styled separator applies orientation-specific sizing", fn() {
+        let t = theme.theme_default()
+        let default_view =
+          ui_separator.separator(
+            theme: t,
+            config: headless_separator.separator_config()
+              |> headless_separator.separator_decorative(decorative: True),
+          )
+
+        let vertical_view =
+          ui_separator.separator(
+            theme: t,
+            config: headless_separator.separator_config()
+              |> headless_separator.separator_decorative(decorative: True)
+              |> headless_separator.separator_orientation(
+                orientation: headless_separator.separator_vertical(),
+              ),
+          )
+
+        let default_css =
+          weft_lustre.debug_stylesheet(attrs: [], child: default_view)
+
+        let vertical_css =
+          weft_lustre.debug_stylesheet(attrs: [], child: vertical_view)
+
+        string.contains(default_css, "height:1px;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(default_css, "width:100%;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(vertical_css, "width:1px;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(vertical_css, "height:100%;")
+        |> expect.to_equal(expected: True)
+      }),
+      it("styled skeleton emits configured size/radius tokens", fn() {
+        let t =
+          theme.theme_default()
+          |> theme.theme_radius_md(radius: weft.px(pixels: 4))
+          |> theme.theme_muted_text(color: weft.rgb(red: 1, green: 2, blue: 3))
+
+        let view =
+          ui_skeleton.skeleton(
+            theme: t,
+            config: headless_skeleton.skeleton_config()
+              |> headless_skeleton.skeleton_width(width: weft.px(pixels: 160))
+              |> headless_skeleton.skeleton_height(height: weft.rem(rem: 2.25))
+              |> headless_skeleton.skeleton_radius(radius: weft.px(pixels: 5)),
+          )
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        string.contains(css, "width:160px;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "height:2.25rem;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "background-color:rgb(1, 2, 3);")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "border-radius:5px;")
+        |> expect.to_equal(expected: True)
+      }),
       it(
         "button applies theme tokens including overrideable shadow colors",
         fn() {
