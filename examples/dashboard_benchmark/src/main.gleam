@@ -1,12 +1,17 @@
 import gleam/dict
+import gleam/dynamic/decode
+import gleam/float
 import gleam/int
 import gleam/list
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element as html_element
 import lustre/element/html as html_el
+import lustre/element/svg as svg_el
+import lustre/event
 import plinth/browser/window
 import weft
 import weft_chart/axis as wc_axis
@@ -35,6 +40,28 @@ import weft_lustre_ui/table
 import weft_lustre_ui/theme as ui_theme
 import weft_lustre_ui/toggle_group
 
+type TableRow {
+  TableRow(
+    id: String,
+    header: String,
+    section_type: String,
+    status: String,
+    target: String,
+    limit: String,
+    reviewer: String,
+    reviewer_is_select: Bool,
+  )
+}
+
+type DragState {
+  DragState(
+    source_index: Int,
+    current_y: Float,
+    start_y: Float,
+    row_height: Float,
+  )
+}
+
 type AppState {
   AppState(
     sidebar_collapsed: Bool,
@@ -50,6 +77,8 @@ type AppState {
     sheet_open: Bool,
     drawer_open: Bool,
     toast_open: Bool,
+    table_rows: List(TableRow),
+    drag: Option(DragState),
   )
 }
 
@@ -72,6 +101,9 @@ pub type Msg {
   DismissToast
   ToggleColorMode
   ViewportMeasured(Int)
+  DragStart(index: Int, y: Float)
+  DragMove(y: Float)
+  DragEnd
 }
 
 const sheet_root_id = "benchmark-sheet"
@@ -135,6 +167,139 @@ const benchmark_toast_trigger_id = "benchmark-show-toast"
 const benchmark_toast_region_id = "benchmark-toast-region"
 
 const benchmark_toast_content_id = "benchmark-toast-content"
+
+fn initial_table_rows() -> List(TableRow) {
+  [
+    TableRow(
+      id: "benchmark-table-row-1",
+      header: "Cover page",
+      section_type: "Cover page",
+      status: "In Process",
+      target: "18",
+      limit: "5",
+      reviewer: "eddie_lake",
+      reviewer_is_select: True,
+    ),
+    TableRow(
+      id: "benchmark-table-row-2",
+      header: "Table of contents",
+      section_type: "Table of contents",
+      status: "Done",
+      target: "29",
+      limit: "24",
+      reviewer: "eddie_lake",
+      reviewer_is_select: True,
+    ),
+    TableRow(
+      id: "benchmark-table-row-3",
+      header: "Executive summary",
+      section_type: "Narrative",
+      status: "Done",
+      target: "10",
+      limit: "13",
+      reviewer: "avery_lucas",
+      reviewer_is_select: True,
+    ),
+    TableRow(
+      id: "benchmark-table-row-4",
+      header: "Technical approach",
+      section_type: "Narrative",
+      status: "In Process",
+      target: "27",
+      limit: "23",
+      reviewer: "Avery Lucas",
+      reviewer_is_select: False,
+    ),
+    TableRow(
+      id: "benchmark-table-row-5",
+      header: "Design",
+      section_type: "Narrative",
+      status: "Done",
+      target: "22",
+      limit: "17",
+      reviewer: "Liam Turner",
+      reviewer_is_select: False,
+    ),
+    TableRow(
+      id: "benchmark-table-row-6",
+      header: "Capabilities",
+      section_type: "Narrative",
+      status: "Done",
+      target: "19",
+      limit: "15",
+      reviewer: "Mia James",
+      reviewer_is_select: False,
+    ),
+    TableRow(
+      id: "benchmark-table-row-7",
+      header: "Integration with existing systems",
+      section_type: "Narrative",
+      status: "Done",
+      target: "24",
+      limit: "16",
+      reviewer: "Noah Patel",
+      reviewer_is_select: False,
+    ),
+    TableRow(
+      id: "benchmark-table-row-8",
+      header: "Innovation and advantages",
+      section_type: "Narrative",
+      status: "In Process",
+      target: "16",
+      limit: "9",
+      reviewer: "Sophia Chen",
+      reviewer_is_select: False,
+    ),
+    TableRow(
+      id: "benchmark-table-row-9",
+      header: "Overview of EMR's Innovative Solutions",
+      section_type: "Narrative",
+      status: "Done",
+      target: "21",
+      limit: "11",
+      reviewer: "Olivia Reed",
+      reviewer_is_select: False,
+    ),
+    TableRow(
+      id: "benchmark-table-row-10",
+      header: "Advanced Algorithms and Machine Learning",
+      section_type: "Narrative",
+      status: "Done",
+      target: "30",
+      limit: "25",
+      reviewer: "Ethan Flores",
+      reviewer_is_select: False,
+    ),
+  ]
+}
+
+const row_height = 49.0
+
+fn drag_target_index(drag: DragState, row_count: Int) -> Int {
+  let delta_y = drag.current_y -. drag.start_y
+  let offset = float.round(delta_y /. drag.row_height)
+  int.clamp(drag.source_index + offset, min: 0, max: row_count - 1)
+}
+
+fn move_to_index(rows: List(a), from from: Int, to to: Int) -> List(a) {
+  case from == to {
+    True -> rows
+    False -> {
+      let indexed = list.index_map(rows, fn(item, i) { #(i, item) })
+      let item = list.key_find(indexed, from)
+      case item {
+        Error(_) -> rows
+        Ok(source_item) -> {
+          let without =
+            list.filter(indexed, fn(pair) { pair.0 != from })
+            |> list.map(fn(pair) { pair.1 })
+          let #(before, after) = list.split(without, to)
+          list.flatten([before, [source_item], after])
+        }
+      }
+    }
+  }
+}
 
 fn theme_label(value: String) -> String {
   case value {
@@ -392,7 +557,10 @@ fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
   )
 }
 
-fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
+fn insights_table(
+  theme: weft_lustre_ui.Theme,
+  state: AppState,
+) -> weft_lustre.Element(Msg) {
   let #(input_surface_bg, _) = ui_theme.input_surface(theme)
 
   let reviewer_options = [
@@ -464,6 +632,51 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
     )
   }
 
+  let grip_icon =
+    weft_lustre.html(
+      svg_el.svg(
+        [
+          attribute.attribute("width", "16"),
+          attribute.attribute("height", "16"),
+          attribute.attribute("viewBox", "0 0 24 24"),
+          attribute.attribute("fill", "currentColor"),
+          attribute.attribute("stroke", "none"),
+        ],
+        [
+          svg_el.circle([
+            attribute.attribute("cx", "9"),
+            attribute.attribute("cy", "5"),
+            attribute.attribute("r", "1"),
+          ]),
+          svg_el.circle([
+            attribute.attribute("cx", "9"),
+            attribute.attribute("cy", "12"),
+            attribute.attribute("r", "1"),
+          ]),
+          svg_el.circle([
+            attribute.attribute("cx", "9"),
+            attribute.attribute("cy", "19"),
+            attribute.attribute("r", "1"),
+          ]),
+          svg_el.circle([
+            attribute.attribute("cx", "15"),
+            attribute.attribute("cy", "5"),
+            attribute.attribute("r", "1"),
+          ]),
+          svg_el.circle([
+            attribute.attribute("cx", "15"),
+            attribute.attribute("cy", "12"),
+            attribute.attribute("r", "1"),
+          ]),
+          svg_el.circle([
+            attribute.attribute("cx", "15"),
+            attribute.attribute("cy", "19"),
+            attribute.attribute("r", "1"),
+          ]),
+        ],
+      ),
+    )
+
   let section_type_badge = fn(section_type: String) {
     badge.badge(
       theme: theme,
@@ -479,23 +692,80 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
     )
   }
 
-  let status_badge = fn(status: String) {
-    let indicator = case status {
-      "Done" -> "●"
-      _ -> "◌"
+  let status_icon = fn(status: String) {
+    let icon = case status {
+      "Done" ->
+        weft_lustre.html(
+          svg_el.svg(
+            [
+              attribute.attribute("width", "16"),
+              attribute.attribute("height", "16"),
+              attribute.attribute("viewBox", "0 0 24 24"),
+              attribute.attribute("fill", "#22c55e"),
+              attribute.attribute("stroke", "none"),
+            ],
+            [
+              svg_el.path([
+                attribute.attribute(
+                  "d",
+                  "M17 3.34a10 10 0 1 1-14.995 8.984L2 12l.005-.324A10 10 0 0 1 17 3.34zm-1.293 5.953a1 1 0 0 0-1.32-.083l-.094.083L11 12.585l-1.293-1.292-.094-.083a1 1 0 0 0-1.403 1.403l.083.094 2 2 .094.083a1 1 0 0 0 1.226 0l.094-.083 4-4 .083-.094a1 1 0 0 0-.083-1.32z",
+                ),
+              ]),
+            ],
+          ),
+        )
+      _ ->
+        weft_lustre.html(
+          svg_el.svg(
+            [
+              attribute.attribute("width", "16"),
+              attribute.attribute("height", "16"),
+              attribute.attribute("viewBox", "0 0 24 24"),
+              attribute.attribute("fill", "none"),
+              attribute.attribute("stroke", "#737373"),
+              attribute.attribute("stroke-width", "2"),
+            ],
+            [
+              svg_el.path([
+                attribute.attribute("d", "M12 6l0 -3"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M16.25 7.75l2.15 -2.15"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M18 12l3 0"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M16.25 16.25l2.15 2.15"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M12 18l0 3"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M7.75 16.25l-2.15 2.15"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M6 12l-3 0"),
+              ]),
+              svg_el.path([
+                attribute.attribute("d", "M7.75 7.75l-2.15 -2.15"),
+              ]),
+            ],
+          ),
+        )
     }
 
-    badge.badge(
-      theme: theme,
-      config: badge.badge_config()
-        |> badge.badge_variant(variant: badge.badge_outline())
-        |> badge.badge_attrs(attrs: [
-          weft_lustre.styles([
-            weft.text_color(color: ui_theme.muted_text(theme)),
-            weft.padding_xy(x: 6, y: 1),
-          ]),
+    weft_lustre.row(
+      attrs: [
+        weft_lustre.styles([
+          weft.align_items(value: weft.align_items_center()),
+          weft.spacing(pixels: 6),
         ]),
-      child: weft_lustre.text(content: indicator <> " " <> status),
+      ],
+      children: [
+        icon,
+        weft_lustre.text(content: status),
+      ],
     )
   }
 
@@ -513,7 +783,6 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
               weft_lustre.html_attribute(attribute.id(row_id <> "-reviewer")),
               weft_lustre.styles([
                 weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
-                weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
               ]),
             ]),
         )
@@ -524,174 +793,275 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
   let header =
     table.table_header(attrs: [], children: [
       table.table_row(theme: theme, attrs: [], children: [
-        table.table_head(attrs: [], child: checkbox_cell(False)),
-        table.table_head(attrs: [], child: weft_lustre.text(content: "Header")),
         table.table_head(
+          theme: theme,
+          attrs: [
+            weft_lustre.styles([
+              weft.width(length: weft.fixed(length: weft.px(pixels: 44))),
+            ]),
+          ],
+          child: weft_lustre.text(content: ""),
+        ),
+        table.table_head(theme: theme, attrs: [], child: checkbox_cell(False)),
+        table.table_head(
+          theme: theme,
+          attrs: [],
+          child: weft_lustre.text(content: "Header"),
+        ),
+        table.table_head(
+          theme: theme,
           attrs: [],
           child: weft_lustre.text(content: "Section Type"),
         ),
-        table.table_head(attrs: [], child: weft_lustre.text(content: "Status")),
-        table.table_head(attrs: [], child: weft_lustre.text(content: "Target")),
-        table.table_head(attrs: [], child: weft_lustre.text(content: "Limit")),
         table.table_head(
+          theme: theme,
+          attrs: [],
+          child: weft_lustre.text(content: "Status"),
+        ),
+        table.table_head(
+          theme: theme,
+          attrs: [],
+          child: weft_lustre.text(content: "Target"),
+        ),
+        table.table_head(
+          theme: theme,
+          attrs: [],
+          child: weft_lustre.text(content: "Limit"),
+        ),
+        table.table_head(
+          theme: theme,
           attrs: [],
           child: weft_lustre.text(content: "Reviewer"),
         ),
-        table.table_head(attrs: [], child: weft_lustre.text(content: "")),
+        table.table_head(
+          theme: theme,
+          attrs: [],
+          child: weft_lustre.text(content: ""),
+        ),
       ]),
     ])
 
-  let row = fn(
-    header_text: String,
-    section_type: String,
-    status: String,
-    target: String,
-    limit: String,
-    reviewer: String,
-    reviewer_is_select: Bool,
-    row_id: String,
-  ) {
+  let row_count = list.length(state.table_rows)
+  let target_idx = case state.drag {
+    None -> -1
+    Some(d) -> drag_target_index(d, row_count)
+  }
+  let source_idx = case state.drag {
+    None -> -1
+    Some(d) -> d.source_index
+  }
+
+  let row_shift = fn(i: Int) -> Float {
+    case state.drag {
+      None -> 0.0
+      Some(_) -> {
+        case i == source_idx {
+          True -> 0.0
+          False ->
+            case source_idx < target_idx {
+              True ->
+                case i > source_idx && i <= target_idx {
+                  True -> float.negate(row_height)
+                  False -> 0.0
+                }
+              False ->
+                case i >= target_idx && i < source_idx {
+                  True -> row_height
+                  False -> 0.0
+                }
+            }
+        }
+      }
+    }
+  }
+
+  let render_row = fn(r: TableRow, index: Int) {
+    let is_source = source_idx == index
+    let shift_y = row_shift(index)
     table.table_row(
       theme: theme,
-      attrs: [weft_lustre.html_attribute(attribute.id(row_id))],
+      attrs: [
+        weft_lustre.html_attribute(attribute.id(r.id)),
+        weft_lustre.styles(
+          list.flatten([
+            [
+              weft.transition(
+                property: weft.transition_property_transform(),
+                duration: weft.ms(milliseconds: 200),
+                easing: weft.cubic_bezier(x1: 0.25, y1: 1.0, x2: 0.5, y2: 1.0),
+              ),
+              weft.transform(items: [
+                weft.translate(
+                  x: weft.px(pixels: 0),
+                  y: weft.px(pixels: float.round(shift_y)),
+                ),
+              ]),
+            ],
+            case is_source {
+              True -> [weft.alpha(opacity: 0.4)]
+              False -> []
+            },
+          ]),
+        ),
+      ],
       children: [
+        table.table_cell(
+          attrs: [
+            weft_lustre.styles([
+              weft.width(length: weft.fixed(length: weft.px(pixels: 44))),
+              weft.text_color(color: weft.rgb(red: 200, green: 200, blue: 200)),
+              weft.cursor(cursor: weft.cursor_grab()),
+              weft.user_select(value: weft.user_select_none()),
+            ]),
+            weft_lustre.html_attribute(attribute.attribute(
+              "touch-action",
+              "none",
+            )),
+            weft_lustre.html_attribute(
+              event.on("pointerdown", {
+                use y <- decode.field("clientY", decode.float)
+                decode.success(DragStart(index:, y:))
+              }),
+            ),
+          ],
+          child: grip_icon,
+        ),
         table.table_cell(attrs: [], child: checkbox_cell(False)),
+        table.table_cell(attrs: [], child: weft_lustre.text(content: r.header)),
+        table.table_cell(attrs: [], child: section_type_badge(r.section_type)),
+        table.table_cell(attrs: [], child: status_icon(r.status)),
         table.table_cell(
           attrs: [],
-          child: weft_lustre.text(content: header_text),
-        ),
-        table.table_cell(attrs: [], child: section_type_badge(section_type)),
-        table.table_cell(attrs: [], child: status_badge(status)),
-        table.table_cell(
-          attrs: [],
-          child: metric_input(target, row_id <> "-target"),
+          child: metric_input(r.target, r.id <> "-target"),
         ),
         table.table_cell(
           attrs: [],
-          child: metric_input(limit, row_id <> "-limit"),
+          child: metric_input(r.limit, r.id <> "-limit"),
         ),
         table.table_cell(
           attrs: [],
-          child: reviewer_cell(reviewer, row_id, reviewer_is_select),
+          child: reviewer_cell(r.reviewer, r.id, r.reviewer_is_select),
         ),
-        table.table_cell(attrs: [], child: weft_lustre.text(content: "⋯")),
+        table.table_cell(attrs: [], child: weft_lustre.text(content: "⋮")),
       ],
     )
   }
 
   let body =
-    table.table_body(attrs: [], children: [
-      row(
-        "Cover page",
-        "Cover page",
-        "In Process",
-        "18",
-        "5",
-        "eddie_lake",
-        True,
-        "benchmark-table-row-1",
-      ),
-      row(
-        "Table of contents",
-        "Table of contents",
-        "Done",
-        "29",
-        "24",
-        "eddie_lake",
-        True,
-        "benchmark-table-row-2",
-      ),
-      row(
-        "Executive summary",
-        "Narrative",
-        "Done",
-        "10",
-        "13",
-        "avery_lucas",
-        True,
-        "benchmark-table-row-3",
-      ),
-      row(
-        "Technical approach",
-        "Narrative",
-        "In Process",
-        "27",
-        "23",
-        "Avery Lucas",
-        False,
-        "benchmark-table-row-4",
-      ),
-      row(
-        "Design",
-        "Narrative",
-        "Done",
-        "22",
-        "17",
-        "Liam Turner",
-        False,
-        "benchmark-table-row-5",
-      ),
-      row(
-        "Capabilities",
-        "Narrative",
-        "Done",
-        "19",
-        "15",
-        "Mia James",
-        False,
-        "benchmark-table-row-6",
-      ),
-      row(
-        "Integration with existing systems",
-        "Narrative",
-        "Done",
-        "24",
-        "16",
-        "Noah Patel",
-        False,
-        "benchmark-table-row-7",
-      ),
-      row(
-        "Innovation and advantages",
-        "Narrative",
-        "In Process",
-        "16",
-        "9",
-        "Sophia Chen",
-        False,
-        "benchmark-table-row-8",
-      ),
-      row(
-        "Overview of EMR's Innovative Solutions",
-        "Narrative",
-        "Done",
-        "21",
-        "11",
-        "Olivia Reed",
-        False,
-        "benchmark-table-row-9",
-      ),
-      row(
-        "Advanced Algorithms and Machine Learning",
-        "Narrative",
-        "Done",
-        "30",
-        "25",
-        "Ethan Flores",
-        False,
-        "benchmark-table-row-10",
-      ),
-    ])
+    table.table_body(
+      attrs: [],
+      children: list.index_map(state.table_rows, render_row),
+    )
 
-  table.table(
-    theme: theme,
-    attrs: [
-      weft_lustre.html_attribute(attribute.id("benchmark-insights-table")),
-      weft_lustre.styles([
-        weft.height(length: weft.fixed(length: weft.px(pixels: 570))),
-      ]),
-    ],
-    children: [header, body],
+  let drag_overlay = case state.drag {
+    None -> weft_lustre.none()
+    Some(drag) -> {
+      let source_row =
+        list.index_map(state.table_rows, fn(r, i) { #(i, r) })
+        |> list.key_find(drag.source_index)
+
+      let floating_row = case source_row {
+        Error(_) -> weft_lustre.none()
+        Ok(r) ->
+          weft_lustre.row(
+            attrs: [
+              weft_lustre.styles([
+                weft.position(value: weft.position_fixed()),
+                weft.left(length: weft.px(pixels: 0)),
+                weft.top(
+                  length: weft.px(pixels: float.round(
+                    drag.current_y -. row_height /. 2.0,
+                  )),
+                ),
+                weft.width(length: weft.fill()),
+                weft.height(
+                  length: weft.fixed(
+                    length: weft.px(pixels: float.round(row_height)),
+                  ),
+                ),
+                weft.pointer_events(value: weft.pointer_events_none()),
+                weft.alpha(opacity: 0.95),
+                weft.background(color: {
+                  let #(bg, _) = ui_theme.surface(theme)
+                  bg
+                }),
+                weft.shadows(shadows: [
+                  weft.shadow(
+                    x: weft.px(pixels: 0),
+                    y: weft.px(pixels: 8),
+                    blur: weft.px(pixels: 24),
+                    spread: weft.px(pixels: -4),
+                    color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.25),
+                  ),
+                ]),
+                weft.padding_xy(x: 16, y: 12),
+                weft.spacing(pixels: 16),
+                weft.align_items(value: weft.align_items_center()),
+                weft.font_size(size: weft.rem(rem: 0.875)),
+                weft.border(
+                  width: weft.px(pixels: 1),
+                  style: weft.border_style_solid(),
+                  color: ui_theme.border_color(theme),
+                ),
+                weft.rounded(radius: ui_theme.radius_md(theme)),
+              ]),
+            ],
+            children: [
+              grip_icon,
+              weft_lustre.text(content: r.header),
+              section_type_badge(r.section_type),
+              status_icon(r.status),
+            ],
+          )
+      }
+
+      weft_lustre.in_front(child: weft_lustre.el(
+        attrs: [
+          weft_lustre.styles([
+            weft.position(value: weft.position_fixed()),
+            weft.inset(length: weft.px(pixels: 0)),
+            weft.cursor(cursor: weft.cursor_grabbing()),
+            weft.user_select(value: weft.user_select_none()),
+          ]),
+          weft_lustre.html_attribute(
+            event.advanced("pointermove", {
+              use y <- decode.field("clientY", decode.float)
+              decode.success(event.handler(
+                dispatch: DragMove(y:),
+                prevent_default: True,
+                stop_propagation: False,
+              ))
+            }),
+          ),
+          weft_lustre.html_attribute(event.on(
+            "pointerup",
+            decode.success(DragEnd),
+          )),
+          weft_lustre.html_attribute(event.on(
+            "pointercancel",
+            decode.success(DragEnd),
+          )),
+        ],
+        child: floating_row,
+      ))
+    }
+  }
+
+  weft_lustre.el(
+    attrs: [],
+    child: weft_lustre.column(attrs: [], children: [
+      table.table(
+        theme: theme,
+        attrs: [
+          weft_lustre.html_attribute(attribute.id("benchmark-insights-table")),
+          weft_lustre.styles([
+            weft.height(length: weft.fixed(length: weft.px(pixels: 570))),
+          ]),
+        ],
+        children: [header, body],
+      ),
+      drag_overlay,
+    ]),
   )
 }
 
@@ -741,7 +1111,7 @@ fn benchmark_tabs(
       children: [
         weft_lustre.el(
           attrs: [weft_lustre.styles([weft.padding_xy(x: 24, y: 0)])],
-          child: scrollable_panel(insights_table(theme)),
+          child: scrollable_panel(insights_table(theme, state)),
         ),
         weft_lustre.row(
           attrs: [
@@ -767,59 +1137,101 @@ fn benchmark_tabs(
       )
     "focus_documents" -> outline_panel
     _ ->
-      weft_lustre.html(wc.area_chart(
-        data: [
-          dp(label: "Mon", desktop: 34, mobile: 24),
-          dp(label: "Tue", desktop: 48, mobile: 33),
-          dp(label: "Wed", desktop: 28, mobile: 20),
-          dp(label: "Thu", desktop: 55, mobile: 38),
-          dp(label: "Fri", desktop: 61, mobile: 42),
-        ],
-        width: 400,
-        height: 200,
-        children: [
-          wc.cartesian_grid(
-            wc_grid.cartesian_grid_config()
-            |> wc_grid.grid_stroke(color: "#e4e4e7")
-            |> wc_grid.grid_vertical(show: False),
-          ),
-          wc.x_axis(wc_axis.x_axis_config()),
-          wc.area(
-            wc_area.area_config(
-              data_key: "desktop",
-              meta: wc_common.series_meta()
-                |> wc_common.series_name(name: "Desktop"),
-            )
-            |> wc_area.area_curve_type(wc_curve.MonotoneX)
-            |> wc_area.area_fill("#71717a")
-            |> wc_area.area_fill_opacity(0.3)
-            |> wc_area.area_stroke("#71717a")
-            |> wc_area.area_stroke_width(2.0),
-          ),
-          wc.area(
-            wc_area.area_config(
-              data_key: "mobile",
-              meta: wc_common.series_meta()
-                |> wc_common.series_name(name: "Mobile"),
-            )
-            |> wc_area.area_curve_type(wc_curve.MonotoneX)
-            |> wc_area.area_fill("#a1a1aa")
-            |> wc_area.area_fill_opacity(0.2)
-            |> wc_area.area_stroke("#a1a1aa")
-            |> wc_area.area_stroke_width(1.5),
-          ),
-          wc.tooltip(wc_tooltip.tooltip_config()),
-        ],
-      ))
+      weft_lustre.html(
+        wc.area_chart(
+          data: [
+            dp(label: "Mon", desktop: 34, mobile: 24),
+            dp(label: "Tue", desktop: 48, mobile: 33),
+            dp(label: "Wed", desktop: 28, mobile: 20),
+            dp(label: "Thu", desktop: 55, mobile: 38),
+            dp(label: "Fri", desktop: 61, mobile: 42),
+          ],
+          width: 400,
+          height: 200,
+          children: [
+            wc.cartesian_grid(
+              wc_grid.cartesian_grid_config()
+              |> wc_grid.grid_stroke(color: "#e4e4e7")
+              |> wc_grid.grid_vertical(show: False),
+            ),
+            wc.x_axis(wc_axis.x_axis_config()),
+            wc.area(
+              wc_area.area_config(
+                data_key: "desktop",
+                meta: wc_common.series_meta()
+                  |> wc_common.series_name(name: "Desktop"),
+              )
+              |> wc_area.area_curve_type(wc_curve.MonotoneX)
+              |> wc_area.area_fill("#71717a")
+              |> wc_area.area_fill_opacity(0.3)
+              |> wc_area.area_stroke("#71717a")
+              |> wc_area.area_stroke_width(2.0),
+            ),
+            wc.area(
+              wc_area.area_config(
+                data_key: "mobile",
+                meta: wc_common.series_meta()
+                  |> wc_common.series_name(name: "Mobile"),
+              )
+              |> wc_area.area_curve_type(wc_curve.MonotoneX)
+              |> wc_area.area_fill("#a1a1aa")
+              |> wc_area.area_fill_opacity(0.2)
+              |> wc_area.area_stroke("#a1a1aa")
+              |> wc_area.area_stroke_width(1.5),
+            ),
+            wc.tooltip(wc_tooltip.tooltip_config()),
+          ],
+        ),
+      )
   }
 
-  let tab_trigger = fn(value: String, label: String) {
+  let tab_trigger = fn(value: String, label: String, count: Option(Int)) {
     let is_active = state.active_tab == value
     let active_attrs = case is_active {
       True -> [
         weft_lustre.html_attribute(attribute.id(benchmark_active_tab_id)),
       ]
       False -> []
+    }
+    let badge_bg = case state.switch_on {
+      True -> weft.rgba(red: 255, green: 255, blue: 255, alpha: 0.3)
+      False -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.3)
+    }
+    let label_el = case count {
+      None -> weft_lustre.text(content: label)
+      Some(n) ->
+        weft_lustre.row(
+          attrs: [
+            weft_lustre.styles([
+              weft.spacing(pixels: 6),
+              weft.align_items(value: weft.align_items_center()),
+            ]),
+          ],
+          children: [
+            weft_lustre.text(content: label),
+            weft_lustre.element_tag(
+              tag: "span",
+              base_weft_attrs: [weft.el_layout()],
+              attrs: [
+                weft_lustre.styles([
+                  weft.display(value: weft.display_inline_flex()),
+                  weft.align_items(value: weft.align_items_center()),
+                  weft.justify_content(value: weft.justify_center()),
+                  weft.background(color: badge_bg),
+                  weft.rounded(radius: weft.px(pixels: 9999)),
+                  weft.font_size(size: weft.rem(rem: 0.75)),
+                  weft.font_weight(weight: weft.font_weight_value(weight: 500)),
+                  weft.padding_xy(x: 4, y: 2),
+                  weft.width(length: weft.minimum(
+                    base: weft.shrink(),
+                    min: weft.px(pixels: 20),
+                  )),
+                ]),
+              ],
+              children: [weft_lustre.text(content: int.to_string(n))],
+            ),
+          ],
+        )
     }
 
     button.button(
@@ -867,7 +1279,7 @@ fn benchmark_tabs(
           ],
           active_attrs,
         )),
-      label: weft_lustre.text(content: label),
+      label: label_el,
     )
   }
 
@@ -922,10 +1334,10 @@ fn benchmark_tabs(
         ]),
       ],
       children: [
-        tab_trigger("outline", "Outline"),
-        tab_trigger("past_performance", "Past Performance 3"),
-        tab_trigger("key_personnel", "Key Personnel 2"),
-        tab_trigger("focus_documents", "Focus Documents"),
+        tab_trigger("outline", "Outline", None),
+        tab_trigger("past_performance", "Past Performance", Some(3)),
+        tab_trigger("key_personnel", "Key Personnel", Some(2)),
+        tab_trigger("focus_documents", "Focus Documents", None),
       ],
     )
 
@@ -948,9 +1360,8 @@ fn benchmark_tabs(
           )
             |> popover.popover_trigger_attrs(attrs: [
               weft_lustre.styles([
-                weft.width(length: weft.fixed(length: weft.px(pixels: 200))),
                 weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
-                weft.padding_xy(x: 8, y: 0),
+                weft.padding_xy(x: 10, y: 0),
                 weft.font_size(size: weft.rem(rem: 0.875)),
               ]),
               weft_lustre.html_attribute(attribute.id(
@@ -962,7 +1373,52 @@ fn benchmark_tabs(
                 benchmark_popover_panel_id,
               )),
             ]),
-          trigger: weft_lustre.text(content: "Customize Columns"),
+          trigger: weft_lustre.row(
+            attrs: [
+              weft_lustre.styles([
+                weft.spacing(pixels: 6),
+                weft.align_items(value: weft.align_items_center()),
+              ]),
+            ],
+            children: [
+              weft_lustre.html(
+                html_element.namespaced(
+                  "http://www.w3.org/2000/svg",
+                  "svg",
+                  [
+                    attribute.attribute("width", "16"),
+                    attribute.attribute("height", "16"),
+                    attribute.attribute("viewBox", "0 0 24 24"),
+                    attribute.attribute("fill", "none"),
+                    attribute.attribute("stroke", "currentColor"),
+                    attribute.attribute("stroke-width", "2"),
+                    attribute.attribute("stroke-linecap", "round"),
+                    attribute.attribute("stroke-linejoin", "round"),
+                  ],
+                  [
+                    html_element.namespaced(
+                      "http://www.w3.org/2000/svg",
+                      "path",
+                      [
+                        attribute.attribute(
+                          "d",
+                          "M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z",
+                        ),
+                      ],
+                      [],
+                    ),
+                    html_element.namespaced(
+                      "http://www.w3.org/2000/svg",
+                      "path",
+                      [attribute.attribute("d", "M12 4l0 16")],
+                      [],
+                    ),
+                  ],
+                ),
+              ),
+              weft_lustre.text(content: "Customize Columns"),
+            ],
+          ),
           panel: text_muted(
             theme,
             "Use tabs and filters to narrow dashboard insights.",
@@ -974,14 +1430,54 @@ fn benchmark_tabs(
             |> button.button_variant(variant: button.secondary())
             |> button.button_attrs(attrs: [
               weft_lustre.styles([
-                weft.width(length: weft.fixed(length: weft.px(pixels: 125))),
                 weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+                weft.padding_xy(x: 10, y: 0),
               ]),
               weft_lustre.html_attribute(attribute.id(
                 benchmark_drawer_trigger_id,
               )),
             ]),
-          label: weft_lustre.text(content: "Add Section"),
+          label: weft_lustre.row(
+            attrs: [
+              weft_lustre.styles([
+                weft.spacing(pixels: 6),
+                weft.align_items(value: weft.align_items_center()),
+              ]),
+            ],
+            children: [
+              weft_lustre.html(
+                html_element.namespaced(
+                  "http://www.w3.org/2000/svg",
+                  "svg",
+                  [
+                    attribute.attribute("width", "16"),
+                    attribute.attribute("height", "16"),
+                    attribute.attribute("viewBox", "0 0 24 24"),
+                    attribute.attribute("fill", "none"),
+                    attribute.attribute("stroke", "currentColor"),
+                    attribute.attribute("stroke-width", "2"),
+                    attribute.attribute("stroke-linecap", "round"),
+                    attribute.attribute("stroke-linejoin", "round"),
+                  ],
+                  [
+                    html_element.namespaced(
+                      "http://www.w3.org/2000/svg",
+                      "path",
+                      [attribute.attribute("d", "M12 5l0 14")],
+                      [],
+                    ),
+                    html_element.namespaced(
+                      "http://www.w3.org/2000/svg",
+                      "path",
+                      [attribute.attribute("d", "M5 12l14 0")],
+                      [],
+                    ),
+                  ],
+                ),
+              ),
+              weft_lustre.text(content: "Add Section"),
+            ],
+          ),
         ),
       ],
     )
@@ -999,6 +1495,11 @@ fn benchmark_tabs(
           weft_lustre.styles([
             weft.align_items(value: weft.align_items_center()),
             weft.justify_content(value: weft.justify_space_between()),
+            weft.padding_xy(x: 24, y: 0),
+            weft.when(
+              query: weft.max_width(length: weft.px(pixels: 767)),
+              attrs: [weft.padding_xy(x: 16, y: 0)],
+            ),
           ]),
         ],
         children: [
@@ -1298,9 +1799,8 @@ fn chart_card(
     ],
     children: [
       filter_row(theme, state),
-      weft_lustre.html(html_el.div(
-        [attribute.styles([#("padding", "0 24px")])],
-        [
+      weft_lustre.html(
+        html_el.div([attribute.styles([#("padding", "0 24px")])], [
           wc.area_chart(
             data: filtered_chart_data,
             width: chart_width(state),
@@ -1371,8 +1871,8 @@ fn chart_card(
               ),
             ],
           ),
-        ],
-      )),
+        ]),
+      ),
       weft_lustre.el(
         attrs: [
           weft_lustre.styles([
@@ -1996,6 +2496,8 @@ pub fn main() {
             sheet_open: False,
             drawer_open: False,
             toast_open: False,
+            table_rows: initial_table_rows(),
+            drag: None,
           ),
           viewport_effect(),
         )
@@ -2061,12 +2563,53 @@ pub fn main() {
             AppState(..state, switch_on: !state.switch_on),
             effect.none(),
           )
+          DragStart(index, y) -> #(
+            AppState(
+              ..state,
+              drag: Some(DragState(
+                source_index: index,
+                current_y: y,
+                start_y: y,
+                row_height: row_height,
+              )),
+            ),
+            effect.none(),
+          )
+          DragMove(y) -> {
+            let new_drag = case state.drag {
+              None -> None
+              Some(d) -> Some(DragState(..d, current_y: y))
+            }
+            #(AppState(..state, drag: new_drag), effect.none())
+          }
+          DragEnd -> {
+            let new_rows = case state.drag {
+              None -> state.table_rows
+              Some(d) -> {
+                let row_count = list.length(state.table_rows)
+                let target = drag_target_index(d, row_count)
+                move_to_index(
+                  state.table_rows,
+                  from: d.source_index,
+                  to: target,
+                )
+              }
+            }
+            #(
+              AppState(..state, table_rows: new_rows, drag: None),
+              effect.none(),
+            )
+          }
           ViewportMeasured(width) -> #(
             case width <= 767 {
               True ->
                 case state.is_mobile_viewport {
                   True ->
-                    AppState(..state, is_mobile_viewport: True, viewport_width: width)
+                    AppState(
+                      ..state,
+                      is_mobile_viewport: True,
+                      viewport_width: width,
+                    )
                   False ->
                     AppState(
                       ..state,
@@ -2076,7 +2619,11 @@ pub fn main() {
                     )
                 }
               False ->
-                AppState(..state, is_mobile_viewport: False, viewport_width: width)
+                AppState(
+                  ..state,
+                  is_mobile_viewport: False,
+                  viewport_width: width,
+                )
             },
             effect.none(),
           )

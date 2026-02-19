@@ -551,7 +551,26 @@ pub fn select(
           },
         ])
 
-      let styles = base_text_control_styles(theme, disabled)
+      // Start from the shared base, then apply select-specific overrides.
+      // The overrides MUST come after the base declarations so they win in the
+      // generated CSS class (later same-property declarations take precedence).
+      //
+      // Key fixes:
+      //   1. Fixed height + reduced vertical padding (4 px vs the base 8 px)
+      //      ensures the 0.875 rem × 1.4 line-height (~19.6 px) fits inside
+      //      the 32 - 8 = 24 px content box — preventing font clipping.
+      //   2. `cursor_pointer` replaces the base `cursor_text` which is wrong
+      //      for a drop-down control.
+      let pad_x = max_int(10, theme.space_md(theme))
+      let styles =
+        list.append(base_text_control_styles(theme, disabled), [
+          weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+          weft.padding_xy(x: pad_x, y: 4),
+          weft.cursor(cursor: case disabled {
+            True -> weft.cursor_not_allowed()
+            False -> weft.cursor_pointer()
+          }),
+        ])
 
       let all_attrs =
         [weft_lustre.styles(styles), ..attrs]
