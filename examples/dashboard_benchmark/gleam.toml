@@ -9,6 +9,7 @@ gleam_stdlib = ">= 0.69.0"
 lustre = ">= 5.0.0 and < 6.0.0"
 plinth = { path = "../../../weft_lustre/vendor/plinth" }
 weft = { path = "../../../weft" }
+weft_chart = { path = "../../../weft_chart" }
 weft_lustre = { path = "../../../weft_lustre" }
 weft_lustre_ui = { path = "../.." }
 

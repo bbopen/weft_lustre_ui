@@ -1,10 +1,21 @@
+import gleam/dict
+import gleam/int
 import gleam/list
+import gleam/string
 import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element as html_element
+import lustre/element/html as html_el
 import plinth/browser/window
 import weft
+import weft_chart/axis as wc_axis
+import weft_chart/chart as wc
+import weft_chart/curve as wc_curve
+import weft_chart/grid as wc_grid
+import weft_chart/series/area as wc_area
+import weft_chart/series/common as wc_common
+import weft_chart/tooltip as wc_tooltip
 import weft_lustre
 import weft_lustre/modal
 import weft_lustre_ui
@@ -13,7 +24,6 @@ import weft_lustre_ui/badge
 import weft_lustre_ui/button
 import weft_lustre_ui/calendar
 import weft_lustre_ui/card
-import weft_lustre_ui/chart
 import weft_lustre_ui/drawer
 import weft_lustre_ui/input
 import weft_lustre_ui/popover
@@ -35,6 +45,7 @@ type AppState {
     density: String,
     switch_on: Bool,
     is_mobile_viewport: Bool,
+    viewport_width: Int,
     popover_open: Bool,
     sheet_open: Bool,
     drawer_open: Bool,
@@ -258,7 +269,14 @@ fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
           weft.background(color: input_surface_bg),
         ]),
       ],
-      child: weft_lustre.text(content: trend),
+      child: weft_lustre.text(content: case string.starts_with(trend, "+") {
+        True -> "↗ " <> trend
+        False ->
+          case string.starts_with(trend, "-") {
+            True -> "↘ " <> trend
+            False -> trend
+          }
+      }),
     )
   }
 
@@ -338,7 +356,7 @@ fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "Total Revenue",
         "$1,250.00",
         "+12.5%",
-        "Trending up this month",
+        "Trending up this month ↗",
         "Visitors for the last 6 months",
         benchmark_metric_card_id_prefix <> "1",
         benchmark_metric_value_id_prefix <> "1",
@@ -347,7 +365,7 @@ fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "New Customers",
         "1,234",
         "-20%",
-        "Down 20% this period",
+        "Down 20% this period ↘",
         "Acquisition needs attention",
         benchmark_metric_card_id_prefix <> "2",
         benchmark_metric_value_id_prefix <> "2",
@@ -356,7 +374,7 @@ fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "Active Accounts",
         "45,678",
         "+12.5%",
-        "Strong user retention",
+        "Strong user retention ↗",
         "Engagement exceed targets",
         benchmark_metric_card_id_prefix <> "3",
         benchmark_metric_value_id_prefix <> "3",
@@ -365,7 +383,7 @@ fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "Growth Rate",
         "4.5%",
         "+4.5%",
-        "Steady performance increase",
+        "Steady performance increase ↗",
         "Meets growth projections",
         benchmark_metric_card_id_prefix <> "4",
         benchmark_metric_value_id_prefix <> "4",
@@ -569,7 +587,7 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "In Process",
         "18",
         "5",
-        "assign",
+        "eddie_lake",
         True,
         "benchmark-table-row-1",
       ),
@@ -579,7 +597,7 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "Done",
         "29",
         "24",
-        "assign",
+        "eddie_lake",
         True,
         "benchmark-table-row-2",
       ),
@@ -589,7 +607,7 @@ fn insights_table(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         "Done",
         "10",
         "13",
-        "assign",
+        "avery_lucas",
         True,
         "benchmark-table-row-3",
       ),
@@ -749,13 +767,50 @@ fn benchmark_tabs(
       )
     "focus_documents" -> outline_panel
     _ ->
-      chart.chart(theme: theme, config: chart.chart_config(), data: [
-        chart.chart_datum(label: "Mon", value: 34),
-        chart.chart_datum(label: "Tue", value: 48),
-        chart.chart_datum(label: "Wed", value: 28),
-        chart.chart_datum(label: "Thu", value: 55),
-        chart.chart_datum(label: "Fri", value: 61),
-      ])
+      weft_lustre.html(wc.area_chart(
+        data: [
+          dp(label: "Mon", desktop: 34, mobile: 24),
+          dp(label: "Tue", desktop: 48, mobile: 33),
+          dp(label: "Wed", desktop: 28, mobile: 20),
+          dp(label: "Thu", desktop: 55, mobile: 38),
+          dp(label: "Fri", desktop: 61, mobile: 42),
+        ],
+        width: 400,
+        height: 200,
+        children: [
+          wc.cartesian_grid(
+            wc_grid.cartesian_grid_config()
+            |> wc_grid.grid_stroke(color: "#e4e4e7")
+            |> wc_grid.grid_vertical(show: False),
+          ),
+          wc.x_axis(wc_axis.x_axis_config()),
+          wc.area(
+            wc_area.area_config(
+              data_key: "desktop",
+              meta: wc_common.series_meta()
+                |> wc_common.series_name(name: "Desktop"),
+            )
+            |> wc_area.area_curve_type(wc_curve.MonotoneX)
+            |> wc_area.area_fill("#71717a")
+            |> wc_area.area_fill_opacity(0.3)
+            |> wc_area.area_stroke("#71717a")
+            |> wc_area.area_stroke_width(2.0),
+          ),
+          wc.area(
+            wc_area.area_config(
+              data_key: "mobile",
+              meta: wc_common.series_meta()
+                |> wc_common.series_name(name: "Mobile"),
+            )
+            |> wc_area.area_curve_type(wc_curve.MonotoneX)
+            |> wc_area.area_fill("#a1a1aa")
+            |> wc_area.area_fill_opacity(0.2)
+            |> wc_area.area_stroke("#a1a1aa")
+            |> wc_area.area_stroke_width(1.5),
+          ),
+          wc.tooltip(wc_tooltip.tooltip_config()),
+        ],
+      ))
   }
 
   let tab_trigger = fn(value: String, label: String) {
@@ -1092,6 +1147,33 @@ fn take_last(items: List(a), count: Int) -> List(a) {
   drop_first(items, drop_count)
 }
 
+fn dp(
+  label label: String,
+  desktop desktop: Int,
+  mobile mobile: Int,
+) -> wc.DataPoint {
+  wc.DataPoint(
+    category: label,
+    values: dict.from_list([
+      #("desktop", int.to_float(desktop)),
+      #("mobile", int.to_float(mobile)),
+    ]),
+  )
+}
+
+fn chart_width(state: AppState) -> Int {
+  let sidebar_w = case state.sidebar_collapsed || state.is_mobile_viewport {
+    True -> 0
+    False -> 256
+  }
+  // viewport minus sidebar, outer horizontal padding (24px x 2), card margins (23px x 2)
+  let raw = state.viewport_width - sidebar_w - 94
+  case raw < 300 {
+    True -> 300
+    False -> raw
+  }
+}
+
 fn chart_card(
   theme: weft_lustre_ui.Theme,
   state: AppState,
@@ -1099,97 +1181,97 @@ fn chart_card(
   let #(surface_bg, _) = ui_theme.surface(theme)
 
   let chart_data = [
-    chart.chart_datum_series(label: "", primary: 222, secondary: 150),
-    chart.chart_datum_series(label: "", primary: 97, secondary: 180),
-    chart.chart_datum_series(label: "Apr 3", primary: 167, secondary: 120),
-    chart.chart_datum_series(label: "", primary: 242, secondary: 260),
-    chart.chart_datum_series(label: "", primary: 373, secondary: 290),
-    chart.chart_datum_series(label: "", primary: 301, secondary: 340),
-    chart.chart_datum_series(label: "", primary: 245, secondary: 180),
-    chart.chart_datum_series(label: "Apr 8", primary: 409, secondary: 320),
-    chart.chart_datum_series(label: "", primary: 59, secondary: 110),
-    chart.chart_datum_series(label: "", primary: 261, secondary: 190),
-    chart.chart_datum_series(label: "", primary: 327, secondary: 350),
-    chart.chart_datum_series(label: "", primary: 292, secondary: 210),
-    chart.chart_datum_series(label: "Apr 13", primary: 342, secondary: 380),
-    chart.chart_datum_series(label: "", primary: 137, secondary: 220),
-    chart.chart_datum_series(label: "", primary: 120, secondary: 170),
-    chart.chart_datum_series(label: "", primary: 138, secondary: 190),
-    chart.chart_datum_series(label: "", primary: 446, secondary: 360),
-    chart.chart_datum_series(label: "Apr 18", primary: 364, secondary: 410),
-    chart.chart_datum_series(label: "", primary: 243, secondary: 180),
-    chart.chart_datum_series(label: "", primary: 89, secondary: 150),
-    chart.chart_datum_series(label: "", primary: 137, secondary: 200),
-    chart.chart_datum_series(label: "", primary: 224, secondary: 170),
-    chart.chart_datum_series(label: "Apr 23", primary: 138, secondary: 230),
-    chart.chart_datum_series(label: "", primary: 387, secondary: 290),
-    chart.chart_datum_series(label: "", primary: 215, secondary: 250),
-    chart.chart_datum_series(label: "", primary: 75, secondary: 130),
-    chart.chart_datum_series(label: "", primary: 383, secondary: 420),
-    chart.chart_datum_series(label: "Apr 28", primary: 122, secondary: 180),
-    chart.chart_datum_series(label: "", primary: 315, secondary: 240),
-    chart.chart_datum_series(label: "", primary: 454, secondary: 380),
-    chart.chart_datum_series(label: "", primary: 165, secondary: 220),
-    chart.chart_datum_series(label: "", primary: 293, secondary: 310),
-    chart.chart_datum_series(label: "May 3", primary: 247, secondary: 190),
-    chart.chart_datum_series(label: "", primary: 385, secondary: 420),
-    chart.chart_datum_series(label: "", primary: 481, secondary: 390),
-    chart.chart_datum_series(label: "", primary: 498, secondary: 520),
-    chart.chart_datum_series(label: "", primary: 388, secondary: 300),
-    chart.chart_datum_series(label: "May 8", primary: 149, secondary: 210),
-    chart.chart_datum_series(label: "", primary: 227, secondary: 180),
-    chart.chart_datum_series(label: "", primary: 293, secondary: 330),
-    chart.chart_datum_series(label: "", primary: 335, secondary: 270),
-    chart.chart_datum_series(label: "", primary: 197, secondary: 240),
-    chart.chart_datum_series(label: "May 13", primary: 197, secondary: 160),
-    chart.chart_datum_series(label: "", primary: 448, secondary: 490),
-    chart.chart_datum_series(label: "", primary: 473, secondary: 380),
-    chart.chart_datum_series(label: "", primary: 338, secondary: 400),
-    chart.chart_datum_series(label: "", primary: 499, secondary: 420),
-    chart.chart_datum_series(label: "May 18", primary: 315, secondary: 350),
-    chart.chart_datum_series(label: "", primary: 235, secondary: 180),
-    chart.chart_datum_series(label: "", primary: 177, secondary: 230),
-    chart.chart_datum_series(label: "", primary: 82, secondary: 140),
-    chart.chart_datum_series(label: "", primary: 81, secondary: 120),
-    chart.chart_datum_series(label: "May 23", primary: 252, secondary: 290),
-    chart.chart_datum_series(label: "", primary: 294, secondary: 220),
-    chart.chart_datum_series(label: "", primary: 201, secondary: 250),
-    chart.chart_datum_series(label: "", primary: 213, secondary: 170),
-    chart.chart_datum_series(label: "", primary: 420, secondary: 460),
-    chart.chart_datum_series(label: "", primary: 233, secondary: 190),
-    chart.chart_datum_series(label: "May 29", primary: 78, secondary: 130),
-    chart.chart_datum_series(label: "", primary: 340, secondary: 280),
-    chart.chart_datum_series(label: "", primary: 178, secondary: 230),
-    chart.chart_datum_series(label: "", primary: 178, secondary: 200),
-    chart.chart_datum_series(label: "", primary: 470, secondary: 410),
-    chart.chart_datum_series(label: "Jun 3", primary: 103, secondary: 160),
-    chart.chart_datum_series(label: "", primary: 439, secondary: 380),
-    chart.chart_datum_series(label: "", primary: 88, secondary: 140),
-    chart.chart_datum_series(label: "", primary: 294, secondary: 250),
-    chart.chart_datum_series(label: "", primary: 323, secondary: 370),
-    chart.chart_datum_series(label: "Jun 8", primary: 385, secondary: 320),
-    chart.chart_datum_series(label: "", primary: 438, secondary: 480),
-    chart.chart_datum_series(label: "", primary: 155, secondary: 200),
-    chart.chart_datum_series(label: "", primary: 92, secondary: 150),
-    chart.chart_datum_series(label: "", primary: 492, secondary: 420),
-    chart.chart_datum_series(label: "Jun 13", primary: 81, secondary: 130),
-    chart.chart_datum_series(label: "", primary: 426, secondary: 380),
-    chart.chart_datum_series(label: "", primary: 307, secondary: 350),
-    chart.chart_datum_series(label: "", primary: 371, secondary: 310),
-    chart.chart_datum_series(label: "", primary: 475, secondary: 520),
-    chart.chart_datum_series(label: "Jun 18", primary: 107, secondary: 170),
-    chart.chart_datum_series(label: "", primary: 341, secondary: 290),
-    chart.chart_datum_series(label: "", primary: 408, secondary: 450),
-    chart.chart_datum_series(label: "", primary: 169, secondary: 210),
-    chart.chart_datum_series(label: "", primary: 317, secondary: 270),
-    chart.chart_datum_series(label: "Jun 23", primary: 480, secondary: 530),
-    chart.chart_datum_series(label: "", primary: 132, secondary: 180),
-    chart.chart_datum_series(label: "", primary: 141, secondary: 190),
-    chart.chart_datum_series(label: "", primary: 434, secondary: 380),
-    chart.chart_datum_series(label: "", primary: 448, secondary: 490),
-    chart.chart_datum_series(label: "", primary: 149, secondary: 200),
-    chart.chart_datum_series(label: "Jun 29", primary: 103, secondary: 160),
-    chart.chart_datum_series(label: "", primary: 446, secondary: 400),
+    dp(label: "Apr 1", desktop: 222, mobile: 150),
+    dp(label: "Apr 2", desktop: 97, mobile: 180),
+    dp(label: "Apr 3", desktop: 167, mobile: 120),
+    dp(label: "Apr 4", desktop: 242, mobile: 260),
+    dp(label: "Apr 5", desktop: 373, mobile: 290),
+    dp(label: "Apr 6", desktop: 301, mobile: 340),
+    dp(label: "Apr 7", desktop: 245, mobile: 180),
+    dp(label: "Apr 8", desktop: 409, mobile: 320),
+    dp(label: "Apr 9", desktop: 59, mobile: 110),
+    dp(label: "Apr 10", desktop: 261, mobile: 190),
+    dp(label: "Apr 11", desktop: 327, mobile: 350),
+    dp(label: "Apr 12", desktop: 292, mobile: 210),
+    dp(label: "Apr 13", desktop: 342, mobile: 380),
+    dp(label: "Apr 14", desktop: 137, mobile: 220),
+    dp(label: "Apr 15", desktop: 120, mobile: 170),
+    dp(label: "Apr 16", desktop: 138, mobile: 190),
+    dp(label: "Apr 17", desktop: 446, mobile: 360),
+    dp(label: "Apr 18", desktop: 364, mobile: 410),
+    dp(label: "Apr 19", desktop: 243, mobile: 180),
+    dp(label: "Apr 20", desktop: 89, mobile: 150),
+    dp(label: "Apr 21", desktop: 137, mobile: 200),
+    dp(label: "Apr 22", desktop: 224, mobile: 170),
+    dp(label: "Apr 23", desktop: 138, mobile: 230),
+    dp(label: "Apr 24", desktop: 387, mobile: 290),
+    dp(label: "Apr 25", desktop: 215, mobile: 250),
+    dp(label: "Apr 26", desktop: 75, mobile: 130),
+    dp(label: "Apr 27", desktop: 383, mobile: 420),
+    dp(label: "Apr 28", desktop: 122, mobile: 180),
+    dp(label: "Apr 29", desktop: 315, mobile: 240),
+    dp(label: "Apr 30", desktop: 454, mobile: 380),
+    dp(label: "May 1", desktop: 165, mobile: 220),
+    dp(label: "May 2", desktop: 293, mobile: 310),
+    dp(label: "May 3", desktop: 247, mobile: 190),
+    dp(label: "May 4", desktop: 385, mobile: 420),
+    dp(label: "May 5", desktop: 481, mobile: 390),
+    dp(label: "May 6", desktop: 498, mobile: 520),
+    dp(label: "May 7", desktop: 388, mobile: 300),
+    dp(label: "May 8", desktop: 149, mobile: 210),
+    dp(label: "May 9", desktop: 227, mobile: 180),
+    dp(label: "May 10", desktop: 293, mobile: 330),
+    dp(label: "May 11", desktop: 335, mobile: 270),
+    dp(label: "May 12", desktop: 197, mobile: 240),
+    dp(label: "May 13", desktop: 197, mobile: 160),
+    dp(label: "May 14", desktop: 448, mobile: 490),
+    dp(label: "May 15", desktop: 473, mobile: 380),
+    dp(label: "May 16", desktop: 338, mobile: 400),
+    dp(label: "May 17", desktop: 499, mobile: 420),
+    dp(label: "May 18", desktop: 315, mobile: 350),
+    dp(label: "May 19", desktop: 235, mobile: 180),
+    dp(label: "May 20", desktop: 177, mobile: 230),
+    dp(label: "May 21", desktop: 82, mobile: 140),
+    dp(label: "May 22", desktop: 81, mobile: 120),
+    dp(label: "May 23", desktop: 252, mobile: 290),
+    dp(label: "May 24", desktop: 294, mobile: 220),
+    dp(label: "May 25", desktop: 201, mobile: 250),
+    dp(label: "May 26", desktop: 213, mobile: 170),
+    dp(label: "May 27", desktop: 420, mobile: 460),
+    dp(label: "May 28", desktop: 233, mobile: 190),
+    dp(label: "May 29", desktop: 78, mobile: 130),
+    dp(label: "May 30", desktop: 340, mobile: 280),
+    dp(label: "May 31", desktop: 178, mobile: 230),
+    dp(label: "Jun 1", desktop: 178, mobile: 200),
+    dp(label: "Jun 2", desktop: 470, mobile: 410),
+    dp(label: "Jun 3", desktop: 103, mobile: 160),
+    dp(label: "Jun 4", desktop: 439, mobile: 380),
+    dp(label: "Jun 5", desktop: 88, mobile: 140),
+    dp(label: "Jun 6", desktop: 294, mobile: 250),
+    dp(label: "Jun 7", desktop: 323, mobile: 370),
+    dp(label: "Jun 8", desktop: 385, mobile: 320),
+    dp(label: "Jun 9", desktop: 438, mobile: 480),
+    dp(label: "Jun 10", desktop: 155, mobile: 200),
+    dp(label: "Jun 11", desktop: 92, mobile: 150),
+    dp(label: "Jun 12", desktop: 492, mobile: 420),
+    dp(label: "Jun 13", desktop: 81, mobile: 130),
+    dp(label: "Jun 14", desktop: 426, mobile: 380),
+    dp(label: "Jun 15", desktop: 307, mobile: 350),
+    dp(label: "Jun 16", desktop: 371, mobile: 310),
+    dp(label: "Jun 17", desktop: 475, mobile: 520),
+    dp(label: "Jun 18", desktop: 107, mobile: 170),
+    dp(label: "Jun 19", desktop: 341, mobile: 290),
+    dp(label: "Jun 20", desktop: 408, mobile: 450),
+    dp(label: "Jun 21", desktop: 169, mobile: 210),
+    dp(label: "Jun 22", desktop: 317, mobile: 270),
+    dp(label: "Jun 23", desktop: 480, mobile: 530),
+    dp(label: "Jun 24", desktop: 132, mobile: 180),
+    dp(label: "Jun 25", desktop: 141, mobile: 190),
+    dp(label: "Jun 26", desktop: 434, mobile: 380),
+    dp(label: "Jun 27", desktop: 448, mobile: 490),
+    dp(label: "Jun 28", desktop: 149, mobile: 200),
+    dp(label: "Jun 29", desktop: 103, mobile: 160),
+    dp(label: "Jun 30", desktop: 446, mobile: 400),
   ]
   let day_window = case state.density {
     "last_30_days" -> 30
@@ -1216,23 +1298,81 @@ fn chart_card(
     ],
     children: [
       filter_row(theme, state),
-      chart.chart(
-        theme: theme,
-        config: chart.chart_config()
-          |> chart.chart_attrs(attrs: [
-            weft_lustre.styles([
-              weft.padding_xy(x: 24, y: 0),
-              weft.when(
-                query: weft.max_width(length: weft.px(pixels: 767)),
-                attrs: [
-                  weft.padding_xy(x: 16, y: 0),
-                ],
+      weft_lustre.html(html_el.div(
+        [attribute.styles([#("padding", "0 24px")])],
+        [
+          wc.area_chart(
+            data: filtered_chart_data,
+            width: chart_width(state),
+            height: 250,
+            children: [
+              wc.cartesian_grid(
+                wc_grid.cartesian_grid_config()
+                |> wc_grid.grid_stroke(color: "#e4e4e7")
+                |> wc_grid.grid_vertical(show: False),
               ),
-              weft.height(length: weft.fixed(length: weft.px(pixels: 276))),
-            ]),
-          ]),
-        data: filtered_chart_data,
-      ),
+              wc.x_axis(
+                wc_axis.x_axis_config()
+                |> wc_axis.axis_tick_line(show: False)
+                |> wc_axis.axis_axis_line(show: False),
+              ),
+              wc.y_axis(wc_axis.y_axis_config() |> wc_axis.axis_hide()),
+              wc.area(
+                wc_area.area_config(
+                  data_key: "mobile",
+                  meta: wc_common.series_meta()
+                    |> wc_common.series_name(name: "Mobile"),
+                )
+                |> wc_area.area_curve_type(wc_curve.Natural)
+                |> wc_area.area_stack_id("a")
+                |> wc_area.area_gradient_fill("chart-mobile-grad", [
+                  wc_area.GradientStop(
+                    offset: "5%",
+                    color: "#a1a1aa",
+                    opacity: 0.8,
+                  ),
+                  wc_area.GradientStop(
+                    offset: "95%",
+                    color: "#a1a1aa",
+                    opacity: 0.1,
+                  ),
+                ])
+                |> wc_area.area_fill("url(#chart-mobile-grad)")
+                |> wc_area.area_stroke("#a1a1aa")
+                |> wc_area.area_stroke_width(2.0),
+              ),
+              wc.area(
+                wc_area.area_config(
+                  data_key: "desktop",
+                  meta: wc_common.series_meta()
+                    |> wc_common.series_name(name: "Desktop"),
+                )
+                |> wc_area.area_curve_type(wc_curve.Natural)
+                |> wc_area.area_stack_id("a")
+                |> wc_area.area_gradient_fill("chart-desktop-grad", [
+                  wc_area.GradientStop(
+                    offset: "5%",
+                    color: "#71717a",
+                    opacity: 1.0,
+                  ),
+                  wc_area.GradientStop(
+                    offset: "95%",
+                    color: "#71717a",
+                    opacity: 0.1,
+                  ),
+                ])
+                |> wc_area.area_fill("url(#chart-desktop-grad)")
+                |> wc_area.area_stroke("#71717a")
+                |> wc_area.area_stroke_width(2.0),
+              ),
+              wc.tooltip(
+                wc_tooltip.tooltip_config()
+                |> wc_tooltip.tooltip_show_active_dot(show: True),
+              ),
+            ],
+          ),
+        ],
+      )),
       weft_lustre.el(
         attrs: [
           weft_lustre.styles([
@@ -1851,6 +1991,7 @@ pub fn main() {
             density: "last_3_months",
             switch_on: False,
             is_mobile_viewport: False,
+            viewport_width: 1400,
             popover_open: False,
             sheet_open: False,
             drawer_open: False,
@@ -1924,15 +2065,18 @@ pub fn main() {
             case width <= 767 {
               True ->
                 case state.is_mobile_viewport {
-                  True -> AppState(..state, is_mobile_viewport: True)
+                  True ->
+                    AppState(..state, is_mobile_viewport: True, viewport_width: width)
                   False ->
                     AppState(
                       ..state,
                       density: "last_7_days",
                       is_mobile_viewport: True,
+                      viewport_width: width,
                     )
                 }
-              False -> AppState(..state, is_mobile_viewport: False)
+              False ->
+                AppState(..state, is_mobile_viewport: False, viewport_width: width)
             },
             effect.none(),
           )
