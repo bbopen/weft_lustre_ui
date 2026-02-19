@@ -106,6 +106,9 @@ cat > "$SCRATCH_DIR/README.md" <<'EOF'
 This directory is intentionally untracked via repo-local config in `.git/info/exclude`.
 Use it for manual, local visual checks before promoting examples into packages.
 
+Committed benchmark parity app lives in `examples/dashboard_benchmark`.
+Use `scripts/check-visual.sh` for tracked desktop/mobile regression checks.
+
 ### Recommended use
 
 - Keep one root block gallery in `src/main.gleam`.
@@ -121,6 +124,8 @@ Use it for manual, local visual checks before promoting examples into packages.
 - `blocks/forms.gleam`
 - `blocks/overlay.gleam`
 - `blocks/composable.gleam`
+- `blocks/navigation.gleam`
+- `blocks/listing.gleam`
 
 Each block is a small composition of headless/styled primitives inspired by
 ShadCN-style building blocks, focusing on:
@@ -140,17 +145,32 @@ ShadCN-style building blocks, focusing on:
 EOF
 
 cat > "$SCRATCH_SRC/main.gleam" <<'EOF'
+import gleam/option.{type Option, None, Some}
 import lustre
 import lustre/effect
 import weft
 import weft_lustre
+import weft_lustre/modal
+import weft_lustre/overlay
 import weft_lustre_ui
+import weft_lustre_ui/tooltip
 
 import blocks/composable
 import blocks/dashboard
 import blocks/forms
 import blocks/hero
-import blocks/overlay
+import blocks/listing
+import blocks/navigation
+import blocks/overlay as overlay_block
+
+type AppState {
+  AppState(
+    tooltip_open: Bool,
+    tooltip_solution: Option(weft.OverlaySolution),
+    modal_open: Bool,
+    toast_visible: Bool,
+  )
+}
 
 pub type Msg {
   HeroPrimary
@@ -159,7 +179,9 @@ pub type Msg {
   CloseDialog
   OpenTooltip
   RepositionTooltip
-  ShowToast
+  TooltipPositioned(weft.OverlaySolution)
+  ViewAllProjects
+  OpenToast
   DismissToast
   EmailInput(String)
   BioInput(String)
@@ -168,12 +190,54 @@ pub type Msg {
   DensitySelect(String)
 }
 
-fn build_page(theme theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
+const modal_root_id = "scratch-modal"
+
+fn tooltip_key() -> overlay.OverlayKey {
+  overlay.overlay_key(value: "scratch-overlay")
+}
+
+fn tooltip_config() -> tooltip.TooltipConfig(Msg) {
+  tooltip.tooltip_config(key: tooltip_key())
+  |> tooltip.tooltip_prefer_sides(sides: [
+    weft.overlay_side_below(),
+    weft.overlay_side_above(),
+  ])
+  |> tooltip.tooltip_alignments(alignments: [weft.overlay_align_center()])
+  |> tooltip.tooltip_viewport_padding_px(pixels: 12)
+  |> tooltip.tooltip_offset_px(pixels: 8)
+}
+
+fn build_page(
+  theme theme: weft_lustre_ui.Theme,
+  state state: AppState,
+) -> weft_lustre.Element(Msg) {
+  let tooltip_overlay =
+    case state.tooltip_open, state.tooltip_solution {
+      False, _ -> weft_lustre.none()
+      True, Some(solution) ->
+        tooltip.tooltip_overlay(
+          theme: theme,
+          config: tooltip_config(),
+          attrs: [weft_lustre.styles([weft.padding(pixels: 8)])],
+          solution: Some(solution),
+          content: weft_lustre.text(content: "Measured tooltip"),
+        )
+
+      True, None ->
+        weft_lustre.column(
+          attrs: [],
+          children: [
+            weft_lustre.text(content: "Tooltip measuring…"),
+            weft_lustre.text(content: "Positioned after first paint"),
+          ],
+        )
+    }
+
   weft_lustre.column(
     attrs: [
       weft_lustre.styles([
-        weft.padding(pixels: 24),
         weft.spacing(pixels: 24),
+        weft.padding(pixels: 24),
       ]),
     ],
     children: [
@@ -182,9 +246,14 @@ fn build_page(theme theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         on_primary: HeroPrimary,
         on_secondary: HeroSecondary,
       ),
+      navigation.navigation_block(theme: theme),
+      listing.listing_block(
+        theme: theme,
+        on_view: ViewAllProjects,
+      ),
       dashboard.dashboard_block(
         theme: theme,
-        on_open_toast: ShowToast,
+        on_open_toast: OpenToast,
       ),
       forms.form_block(
         theme: theme,
@@ -194,16 +263,20 @@ fn build_page(theme theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
         on_terms_toggle: TermsToggle,
         on_density_select: DensitySelect,
       ),
-      overlay.overlay_block(
+      overlay_block.overlay_block(
         theme: theme,
         on_open_tooltip: OpenTooltip,
       ),
+      tooltip_overlay,
       composable.modal_and_toast_block(
         theme: theme,
         on_open_dialog: OpenDialog,
         on_close_dialog: CloseDialog,
+        on_show_toast: OpenToast,
         on_toast_dismiss: DismissToast,
         on_reposition_tooltip: RepositionTooltip,
+        modal_open: state.modal_open,
+        toast_visible: state.toast_visible,
       ),
     ],
   )
@@ -212,31 +285,87 @@ fn build_page(theme theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
 pub fn main() {
   let app =
     lustre.application(
-    init: fn(_flags: Nil) { #(Nil, effect.none()) },
-    update: fn(state: Nil, msg: Msg) {
-      case msg {
-        HeroPrimary -> #(state, effect.none())
-        HeroSecondary -> #(state, effect.none())
-        OpenDialog -> #(state, effect.none())
-        CloseDialog -> #(state, effect.none())
-        OpenTooltip -> #(state, effect.none())
-        RepositionTooltip -> #(state, effect.none())
-        ShowToast -> #(state, effect.none())
-        DismissToast -> #(state, effect.none())
-        EmailInput(_) -> #(state, effect.none())
-        BioInput(_) -> #(state, effect.none())
-        TeamSelect(_) -> #(state, effect.none())
-        TermsToggle(_) -> #(state, effect.none())
-        DensitySelect(_) -> #(state, effect.none())
-      }
-    },
-    view: fn(_state: Nil) {
-      weft_lustre.layout(
-        attrs: [],
-        child: build_page(theme: weft_lustre_ui.theme_default()),
-      )
-    },
-  )
+      init: fn(_flags: Nil) {
+        #(
+          AppState(
+            tooltip_open: False,
+            tooltip_solution: None,
+            modal_open: False,
+            toast_visible: False,
+          ),
+          effect.none(),
+        )
+      },
+      update: fn(state: AppState, msg: Msg) {
+        case msg {
+          HeroPrimary -> #(state, effect.none())
+          HeroSecondary -> #(state, effect.none())
+          OpenDialog ->
+            #(
+              AppState(..state, modal_open: True),
+              modal.modal_focus_trap(root_id: modal_root_id, on_escape: CloseDialog),
+            )
+
+          CloseDialog ->
+            #(AppState(..state, modal_open: False), effect.none())
+
+          OpenToast ->
+            #(AppState(..state, toast_visible: True), effect.none())
+
+          DismissToast ->
+            #(AppState(..state, toast_visible: False), effect.none())
+
+          OpenTooltip -> {
+            let eff =
+              tooltip.tooltip_effect(
+                config: tooltip_config(),
+                on_positioned: TooltipPositioned,
+              )
+
+            #(
+              AppState(
+                ..state,
+                tooltip_open: True,
+                tooltip_solution: None,
+              ),
+              eff,
+            )
+          }
+
+          ViewAllProjects -> #(state, effect.none())
+
+          RepositionTooltip ->
+            case state.tooltip_open {
+              True -> #(
+                AppState(..state, tooltip_solution: None),
+                tooltip.tooltip_effect(
+                  config: tooltip_config(),
+                  on_positioned: TooltipPositioned,
+                ),
+              )
+              False -> #(state, effect.none())
+            }
+
+          TooltipPositioned(solution) ->
+            #(AppState(..state, tooltip_solution: Some(solution)), effect.none())
+
+          EmailInput(_) -> #(state, effect.none())
+          BioInput(_) -> #(state, effect.none())
+          TeamSelect(_) -> #(state, effect.none())
+          TermsToggle(_) -> #(state, effect.none())
+          DensitySelect(_) -> #(state, effect.none())
+        }
+      },
+      view: fn(state: AppState) {
+        weft_lustre.layout(
+          attrs: [],
+          child: build_page(
+            theme: weft_lustre_ui.theme_default(),
+            state: state,
+          ),
+        )
+      },
+    )
 
   lustre.start(app, "#app", Nil)
 }
@@ -620,22 +749,54 @@ pub fn modal_and_toast_block(
   theme theme: weft_lustre_ui.Theme,
   on_open_dialog on_open_dialog: msg,
   on_close_dialog on_close_dialog: msg,
+  on_show_toast on_show_toast: msg,
   on_toast_dismiss on_toast_dismiss: msg,
   on_reposition_tooltip _on_reposition_tooltip: msg,
+  modal_open modal_open: Bool,
+  toast_visible toast_visible: Bool,
 ) -> weft_lustre.Element(msg) {
-  let open =
-    button.button(
-      theme: theme,
-      config: button.button_config(on_press: on_open_dialog),
-      label: weft_lustre.text(content: "Open modal shell"),
+  let controls =
+    weft_lustre.row(
+      attrs: [weft_lustre.styles([weft.spacing(pixels: 12)])],
+      children: [
+        button.button(
+          theme: theme,
+          config: button.button_config(on_press: on_open_dialog),
+          label: weft_lustre.text(content: "Open modal"),
+        ),
+        button.button(
+          theme: theme,
+          config: button.button_config(on_press: on_show_toast),
+          label: weft_lustre.text(content: "Show toast"),
+        ),
+      ],
     )
 
-  let close =
-    button.button(
-      theme: theme,
-      config: button.button_config(on_press: on_close_dialog),
-      label: weft_lustre.text(content: "Close"),
-    )
+  let modal =
+    case modal_open {
+      False -> weft_lustre.none()
+      True ->
+        styled_dialog.dialog(
+          theme: theme,
+          config:
+            styled_dialog.dialog_config(
+              root_id: "scratch-modal",
+              label: styled_dialog.dialog_label(value: "Scratch modal"),
+              on_close: on_close_dialog,
+            ),
+          content: weft_lustre.column(
+            attrs: [],
+            children: [
+              weft_lustre.text(content: "Modal content shell"),
+              button.button(
+                theme: theme,
+                config: button.button_config(on_press: on_close_dialog),
+                label: weft_lustre.text(content: "Close"),
+              ),
+            ],
+          ),
+        )
+    }
 
   let toast_item =
     styled_toast.toast(
@@ -645,27 +806,15 @@ pub fn modal_and_toast_block(
     )
 
   let toast_region =
-    styled_toast.toast_region(
-      theme: theme,
-      corner: styled_toast.toast_corner_bottom_right(),
-      children: [toast_item],
-    )
-
-  let modal =
-    styled_dialog.dialog(
-      theme: theme,
-      config:
-        styled_dialog.dialog_config(
-          root_id: "scratch-modal",
-          label: styled_dialog.dialog_label(value: "Scratch modal"),
-          on_close: on_close_dialog,
-        ),
-      content:
-        weft_lustre.column(
-          attrs: [],
-          children: [weft_lustre.text(content: "Modal content shell"), close],
-        ),
-    )
+    case toast_visible {
+      False -> weft_lustre.none()
+      True ->
+        styled_toast.toast_region(
+          theme: theme,
+          corner: styled_toast.toast_corner_bottom_right(),
+          children: [toast_item],
+        )
+    }
 
   card.card(
     theme: theme,
@@ -679,19 +828,232 @@ pub fn modal_and_toast_block(
       card.card_content(
         theme: theme,
         attrs: [weft_lustre.styles([weft.spacing(pixels: 12)])],
+        children: [controls, toast_region, modal],
+      ),
+    ],
+  )
+}
+EOF
+
+cat > "$SCRATCH_BLOCKS/navigation.gleam" <<'EOF'
+import weft
+import weft_lustre
+import weft_lustre_ui
+import weft_lustre_ui/badge
+import weft_lustre_ui/card
+import weft_lustre_ui/headless/separator as headless_separator
+import weft_lustre_ui/link
+import weft_lustre_ui/separator
+
+fn nav_link(
+  theme theme: weft_lustre_ui.Theme,
+  label label: String,
+  href href: String,
+) -> weft_lustre.Element(msg) {
+  link.link(
+    theme: theme,
+    config: link.link_config(href: href),
+    label: weft_lustre.text(content: label),
+  )
+}
+
+pub fn navigation_block(theme theme: weft_lustre_ui.Theme) -> weft_lustre.Element(msg) {
+  let pills =
+    weft_lustre.row(
+      attrs: [weft_lustre.styles([weft.spacing(pixels: 8)])],
+      children: [
+        badge.badge(
+          theme: theme,
+          config: badge.badge_config() |> badge.badge_variant(
+            variant: badge.badge_secondary(),
+          ),
+          child: weft_lustre.text(content: "v1.0"),
+        ),
+        badge.badge(
+          theme: theme,
+          config: badge.badge_config() |> badge.badge_variant(
+            variant: badge.badge_outline(),
+          ),
+          child: weft_lustre.text(content: "shadcn-like"),
+        ),
+      ],
+    )
+
+  let nav =
+    weft_lustre.row(
+      attrs: [
+        weft_lustre.styles([
+          weft.spacing(pixels: 16),
+          weft.align_items(value: weft.align_items_center()),
+        ]),
+      ],
+      children: [
+        nav_link(theme: theme, label: "Overview", href: "/overview"),
+        nav_link(theme: theme, label: "Projects", href: "/projects"),
+        nav_link(theme: theme, label: "Team", href: "/team"),
+        nav_link(theme: theme, label: "Settings", href: "/settings"),
+      ],
+    )
+
+  card.card(
+    theme: theme,
+    attrs: [],
+    children: [
+      card.card_header(
+        theme: theme,
+        attrs: [],
+        children: [weft_lustre.text(content: "App shell")],
+      ),
+      card.card_content(
+        theme: theme,
+        attrs: [weft_lustre.styles([weft.spacing(pixels: 12)])],
         children: [
           weft_lustre.row(
-            attrs: [weft_lustre.styles([weft.spacing(pixels: 12)])],
-            children: [open, close],
+            attrs: [weft_lustre.styles([weft.justify_content(value: weft.justify_space_between())])],
+            children: [
+              weft_lustre.column(
+                attrs: [weft_lustre.styles([weft.spacing(pixels: 4)])],
+                children: [
+                  weft_lustre.text(content: "weft_lustre_ui"),
+                  weft_lustre.text(content: "ShadCN-inspired component composition"),
+                ],
+              ),
+              pills,
+            ],
           ),
-          toast_region,
-          modal,
+          separator.separator(
+            theme: theme,
+            config: headless_separator.separator_config()
+            |> headless_separator.separator_orientation(
+              orientation: headless_separator.separator_horizontal(),
+            ),
+          ),
+          nav,
         ],
       ),
     ],
   )
 }
 EOF
+
+cat > "$SCRATCH_BLOCKS/listing.gleam" <<'EOF'
+import gleam/list
+import weft
+import weft_lustre
+import weft_lustre_ui
+import weft_lustre_ui/badge
+import weft_lustre_ui/button
+import weft_lustre_ui/card
+import weft_lustre_ui/link
+
+type ListingRow {
+  ListingRow(
+    title: String,
+    owner: String,
+    status: String,
+    variant: badge.BadgeVariant,
+    action_text: String,
+    href: String,
+  )
+}
+
+fn listing_row(
+  theme theme: weft_lustre_ui.Theme,
+  row row: ListingRow,
+) -> weft_lustre.Element(msg) {
+  let status_badge =
+    badge.badge(
+      theme: theme,
+      config: badge.badge_config() |> badge.badge_variant(variant: row.variant),
+      child: weft_lustre.text(content: row.status),
+    )
+
+  let link_target =
+    link.link(
+      theme: theme,
+      config: link.link_config(href: row.href),
+      label: weft_lustre.text(content: row.action_text),
+    )
+
+  weft_lustre.row(
+    attrs: [weft_lustre.styles([weft.justify_content(value: weft.justify_space_between())])],
+    children: [
+      weft_lustre.column(
+        attrs: [weft_lustre.styles([weft.spacing(pixels: 2)])],
+        children: [
+          weft_lustre.text(content: row.title),
+          weft_lustre.text(content: row.owner),
+        ],
+      ),
+      status_badge,
+      link_target,
+    ],
+  )
+}
+
+pub fn listing_block(
+  theme theme: weft_lustre_ui.Theme,
+  on_view on_view: msg,
+) -> weft_lustre.Element(msg) {
+  let rows =
+    [
+      ListingRow(
+        title: "Design system",
+        owner: "Ada Lovelace • 2h",
+        status: "Active",
+        variant: badge.badge_secondary(),
+        action_text: "View",
+        href: "/projects/design-system",
+      ),
+      ListingRow(
+        title: "Checkout flow",
+        owner: "Lovelace Labs • 4h",
+        status: "Blocked",
+        variant: badge.badge_destructive(),
+        action_text: "Review",
+        href: "/projects/checkout-flow",
+      ),
+      ListingRow(
+        title: "Reporting dashboard",
+        owner: "Ops Team • 7m",
+        status: "Review",
+        variant: badge.badge_ghost(),
+        action_text: "Open",
+        href: "/projects/dashboard",
+      ),
+    ]
+
+  let cta =
+    button.button(
+      theme: theme,
+      config: button.button_config(on_press: on_view),
+      label: weft_lustre.text(content: "Open full table"),
+    )
+
+  card.card(
+    theme: theme,
+    attrs: [],
+    children: [
+      card.card_header(
+        theme: theme,
+        attrs: [],
+        children: [weft_lustre.text(content: "Recent Workloads")],
+      ),
+      card.card_content(
+        theme: theme,
+        attrs: [weft_lustre.styles([weft.spacing(pixels: 12)])],
+        children: list.map(rows, listing_row(theme: theme, row: _)),
+      ),
+      card.card_footer(
+        theme: theme,
+        attrs: [weft_lustre.styles([weft.align_items(value: weft.align_items_center())])],
+        children: [cta],
+      ),
+    ],
+  )
+}
+EOF
+ 
 
 cat > "$SCRATCH_DIR/index.html" <<EOF
 <!doctype html>

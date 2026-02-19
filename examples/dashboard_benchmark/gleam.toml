@@ -1,0 +1,16 @@
+name = "dashboard_benchmark"
+version = "0.1.0"
+description = "Committed benchmark app for weft_lustre_ui dashboard parity checks."
+licences = ["Apache-2.0"]
+gleam = ">= 1.14.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.69.0"
+lustre = ">= 5.0.0 and < 6.0.0"
+plinth = { path = "../../../weft_lustre/vendor/plinth" }
+weft = { path = "../../../weft" }
+weft_lustre = { path = "../../../weft_lustre" }
+weft_lustre_ui = { path = "../.." }
+
+[dev-dependencies]
+startest = ">= 0.8.0"

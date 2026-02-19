@@ -140,7 +140,7 @@ fn max_int(a: Int, b: Int) -> Int {
 
 fn padding_for(size: Size, space_md: Int) -> #(Int, Int) {
   let base_x = max_int(8, space_md)
-  let base_y = max_int(6, space_md - 4)
+  let base_y = max_int(4, space_md - 6)
 
   case size {
     Sm -> #(max_int(6, base_x - 2), max_int(4, base_y - 2))
@@ -152,7 +152,7 @@ fn padding_for(size: Size, space_md: Int) -> #(Int, Int) {
 fn font_size_for(size: Size) -> weft.CssLength {
   case size {
     Sm -> weft.rem(rem: 0.875)
-    Md -> weft.rem(rem: 0.9375)
+    Md -> weft.rem(rem: 0.875)
     Lg -> weft.rem(rem: 1.0)
   }
 }
@@ -189,22 +189,16 @@ fn base_styles(
     False -> weft.cursor_pointer()
   }
 
-  let base_shadow =
-    weft.shadow(
-      x: weft.px(pixels: 0),
-      y: weft.px(pixels: 1),
-      blur: weft.px(pixels: 2),
-      spread: weft.px(pixels: 0),
-      color: theme.button_shadow_base(t),
-    )
-
   let interaction_styles = case disabled {
     True -> []
     False -> [
       weft.mouse_over(attrs: [
-        weft.transform(items: [
-          weft.translate(x: weft.px(pixels: 0), y: weft.px(pixels: -1)),
-        ]),
+        case variant {
+          Primary -> weft.alpha(opacity: 0.92)
+          Secondary ->
+            weft.background(color: weft.rgb(red: 244, green: 244, blue: 245))
+          Danger -> weft.alpha(opacity: 0.9)
+        },
         weft.shadows(shadows: [
           weft.shadow(
             x: weft.px(pixels: 0),
@@ -216,10 +210,16 @@ fn base_styles(
         ]),
       ]),
       weft.active(attrs: [
-        weft.transform(items: [
-          weft.translate(x: weft.px(pixels: 0), y: weft.px(pixels: 0)),
+        weft.alpha(opacity: 1.0),
+        weft.shadows(shadows: [
+          weft.shadow(
+            x: weft.px(pixels: 0),
+            y: weft.px(pixels: 1),
+            blur: weft.px(pixels: 2),
+            spread: weft.px(pixels: 0),
+            color: theme.button_shadow_base(t),
+          ),
         ]),
-        weft.shadows(shadows: [base_shadow]),
       ]),
     ]
   }
@@ -241,22 +241,25 @@ fn base_styles(
       weft.font_family(families: theme.font_families(t)),
       weft.font_weight(weight: weft.font_weight_value(weight: 600)),
       weft.font_size(size: font_size_for(size)),
-      weft.line_height(height: weft.line_height_multiple(multiplier: 1.1)),
+      weft.line_height(height: weft.line_height_multiple(multiplier: 1.4)),
       weft.text_decoration(value: weft.text_decoration_none()),
       weft.user_select(value: weft.user_select_none()),
       weft.appearance(value: weft.appearance_none()),
       weft.cursor(cursor: cursor),
       weft.outline_none(),
-      weft.shadows(shadows: [base_shadow]),
+      weft.shadows(shadows: [
+        weft.shadow(
+          x: weft.px(pixels: 0),
+          y: weft.px(pixels: 1),
+          blur: weft.px(pixels: 2),
+          spread: weft.px(pixels: 0),
+          color: theme.button_shadow_base(t),
+        ),
+      ]),
       weft.transitions(transitions: [
         weft.transition_item(
-          property: weft.transition_property_transform(),
-          duration: weft.ms(milliseconds: 140),
-          easing: weft.ease_out(),
-        ),
-        weft.transition_item(
-          property: weft.transition_property_box_shadow(),
-          duration: weft.ms(milliseconds: 140),
+          property: weft.transition_property_all(),
+          duration: weft.ms(milliseconds: 120),
           easing: weft.ease_out(),
         ),
       ]),
@@ -273,7 +276,6 @@ fn base_styles(
       weft.disabled(attrs: [
         weft.alpha(opacity: theme.disabled_opacity(t)),
         weft.cursor(cursor: weft.cursor_not_allowed()),
-        weft.transform(items: []),
         weft.shadows(shadows: []),
       ]),
     ],

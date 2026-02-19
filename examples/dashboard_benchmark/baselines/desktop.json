@@ -1,0 +1,99 @@
+{
+  "viewport": {
+    "width": 1440,
+    "height": 900
+  },
+  "bodyOverflowX": 0,
+  "buttonCount": 15,
+  "toastCount": 0,
+  "activeTab": "Past Performance 3",
+  "sideBarState": {
+    "expandedWidth": 288,
+    "collapsedWidth": 288,
+    "delta": 261,
+    "expandedX": -288,
+    "expandedY": 0,
+    "collapsedX": -27,
+    "collapsedY": 0
+  },
+  "rects": {
+    "sidebar": {
+      "x": -288,
+      "y": 0,
+      "width": 288,
+      "height": 900
+    },
+    "mainSurface": {
+      "x": 18,
+      "y": 75,
+      "width": 1404,
+      "height": 2124
+    },
+    "metricsRow": {
+      "x": 18,
+      "y": 75,
+      "width": 1404,
+      "height": 184
+    },
+    "filterRow": {
+      "x": 19,
+      "y": 292,
+      "width": 1402,
+      "height": 44
+    },
+    "tabs": {
+      "x": 18,
+      "y": 731,
+      "width": 1404,
+      "height": 1468
+    },
+    "tabList": {
+      "x": 18,
+      "y": 731,
+      "width": 1404,
+      "height": 36
+    },
+    "tabPanel": {
+      "x": 33,
+      "y": 794,
+      "width": 1374,
+      "height": 1390
+    },
+    "select": {
+      "x": 220,
+      "y": 13,
+      "width": 209,
+      "height": 32
+    },
+    "table": {
+      "x": 33,
+      "y": 794,
+      "width": 1374,
+      "height": 570
+    },
+    "popoverOpen": {
+      "x": 1089,
+      "y": 721,
+      "width": 200,
+      "height": 48
+    },
+    "sheetOpen": {
+      "x": 449,
+      "y": 420,
+      "width": 542,
+      "height": 60
+    },
+    "drawerOpen": {
+      "x": 449,
+      "y": 287,
+      "width": 542,
+      "height": 60
+    },
+    "toastOpen": {
+      "x": 1210,
+      "y": 840,
+      "width": 179,
+      "height": 18
+    }
+  }
+}

@@ -11,3 +11,31 @@ gleam build --target erlang --warnings-as-errors
 gleam build --target javascript --warnings-as-errors
 gleam test
 gleam docs build
+
+if [ "${WEFT_LUSTRE_UI_SKIP_PARITY:-0}" != "1" ]; then
+  bash scripts/start-parity-servers.sh
+  trap 'bash scripts/stop-parity-servers.sh >/dev/null 2>&1 || true' EXIT
+
+  bash scripts/check-reference-signature.sh
+  npx --yes --package=playwright@1.54.1 node scripts/check-parity.mjs
+fi
+
+if [ "${WEFT_LUSTRE_UI_SKIP_VISUAL:-0}" != "1" ]; then
+  if [ "${WEFT_LUSTRE_UI_SKIP_PARITY:-0}" = "1" ]; then
+    bash scripts/start-parity-servers.sh
+    trap 'bash scripts/stop-parity-servers.sh >/dev/null 2>&1 || true' EXIT
+  fi
+
+  if [ "${WEFT_LUSTRE_UI_REQUIRE_VISUAL:-0}" = "1" ]; then
+    bash scripts/check-visual.sh
+  else
+    if ! bash scripts/check-visual.sh; then
+      echo "WARN: reference visual check is advisory by default. Set WEFT_LUSTRE_UI_REQUIRE_VISUAL=1 to fail hard." >&2
+    fi
+  fi
+fi
+
+if [ "${WEFT_LUSTRE_UI_SKIP_PARITY:-0}" != "1" ] || [ "${WEFT_LUSTRE_UI_SKIP_VISUAL:-0}" != "1" ]; then
+  bash scripts/stop-parity-servers.sh >/dev/null 2>&1 || true
+  trap - EXIT
+fi

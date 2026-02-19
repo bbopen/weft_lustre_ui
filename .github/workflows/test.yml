@@ -10,11 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
       - uses: erlef/setup-beam@v1
         with:
           otp-version: "28"
           gleam-version: "1.14.0"
           rebar3-version: "3"
+      - run: sudo apt-get update && sudo apt-get install -y imagemagick
       - run: gleam deps download
       - run: bash scripts/check.sh
-
+      - if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-benchmark-visual
+          path: examples/dashboard_benchmark/visual-artifacts

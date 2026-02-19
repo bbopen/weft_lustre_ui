@@ -1,8 +1,8 @@
 //// Headless (unstyled) badge component for weft_lustre_ui.
 ////
-//// This module provides only semantic badge structure and configuration. Styling is
-//// intentionally absent so callers can layer either headless styles manually or
-//// use the themed wrapper in `weft_lustre_ui/badge`.
+//// This module provides only semantic badge structure and configuration.
+//// Visual variants are not applied here; variants are intentionally ignored and
+//// composed by the styled wrapper in `weft_lustre_ui/badge`.
 
 import gleam/list
 import weft
@@ -63,6 +63,10 @@ pub fn badge_config() -> BadgeConfig(msg) {
 }
 
 /// Set the badge variant.
+///
+/// Headless badges are unstyled, so variant has no visual effect.
+/// Variants are accepted for structural parity and are consumed by the styled
+/// badge component.
 pub fn badge_variant(
   config config: BadgeConfig(msg),
   variant variant: BadgeVariant,

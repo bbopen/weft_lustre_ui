@@ -14,6 +14,7 @@ fn card_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
 
   [
     weft.display(value: weft.display_block()),
+    weft.width(length: weft.fixed(length: weft.pct(pct: 100.0))),
     weft.background(color: bg),
     weft.text_color(color: fg),
     weft.border(
@@ -21,25 +22,33 @@ fn card_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
       style: weft.border_style_solid(),
       color: theme.border_color(theme),
     ),
-    weft.rounded(radius: theme.radius_md(theme)),
+    weft.rounded(radius: weft.px(pixels: 14)),
+    weft.overflow(overflow: weft.overflow_hidden()),
     weft.font_family(families: theme.font_families(theme)),
+    weft.shadows(shadows: [
+      weft.shadow(
+        x: weft.px(pixels: 0),
+        y: weft.px(pixels: 1),
+        blur: weft.px(pixels: 2),
+        spread: weft.px(pixels: 0),
+        color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04),
+      ),
+    ]),
   ]
 }
 
-fn card_header_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
+fn card_header_styles() -> List(weft.Attribute) {
   [
-    weft.display(value: weft.display_flex()),
-    weft.justify_content(value: weft.justify_space_between()),
-    weft.align_items(value: weft.align_items_center()),
-    weft.spacing(pixels: theme.space_md(theme)),
+    weft.column_layout(),
+    weft.spacing(pixels: 6),
   ]
 }
 
 fn card_title_styles() -> List(weft.Attribute) {
   [
-    weft.font_size(size: weft.rem(rem: 1.0)),
-    weft.line_height(height: weft.line_height_multiple(multiplier: 1.25)),
-    weft.font_weight(weight: weft.font_weight_value(weight: 600)),
+    weft.font_size(size: weft.rem(rem: 1.5)),
+    weft.line_height(height: weft.line_height_multiple(multiplier: 1.15)),
+    weft.font_weight(weight: weft.font_weight_value(weight: 650)),
   ]
 }
 
@@ -58,8 +67,22 @@ fn card_action_styles() -> List(weft.Attribute) {
   ]
 }
 
-fn card_section_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
-  [weft.spacing(pixels: theme.space_md(theme))]
+fn card_header_section_styles() -> List(weft.Attribute) {
+  [
+    weft.padding(pixels: 20),
+  ]
+}
+
+fn card_content_section_styles() -> List(weft.Attribute) {
+  [
+    weft.padding_xy(x: 20, y: 12),
+  ]
+}
+
+fn card_footer_section_styles() -> List(weft.Attribute) {
+  [
+    weft.padding_xy(x: 20, y: 16),
+  ]
 }
 
 /// Render a styled card root container.
@@ -77,7 +100,7 @@ pub fn card(
 
 /// Render a styled card header section.
 pub fn card_header(
-  theme theme: theme.Theme,
+  theme _theme: theme.Theme,
   attrs attrs: List(weft_lustre.Attribute(msg)),
   children children: List(weft_lustre.Element(msg)),
 ) -> weft_lustre.Element(msg) {
@@ -86,8 +109,8 @@ pub fn card_header(
     |> list.prepend(
       weft_lustre.styles(
         list.flatten([
-          card_section_styles(theme: theme),
-          card_header_styles(theme: theme),
+          card_header_section_styles(),
+          card_header_styles(),
         ]),
       ),
     )
@@ -97,20 +120,13 @@ pub fn card_header(
 
 /// Render a styled card title section.
 pub fn card_title(
-  theme theme: theme.Theme,
+  theme _theme: theme.Theme,
   attrs attrs: List(weft_lustre.Attribute(msg)),
   children children: List(weft_lustre.Element(msg)),
 ) -> weft_lustre.Element(msg) {
   let styled_attrs =
     attrs
-    |> list.prepend(
-      weft_lustre.styles(
-        list.flatten([
-          card_section_styles(theme: theme),
-          card_title_styles(),
-        ]),
-      ),
-    )
+    |> list.prepend(weft_lustre.styles(card_title_styles()))
 
   headless_card.card_title(attrs: styled_attrs, children: children)
 }
@@ -123,59 +139,46 @@ pub fn card_description(
 ) -> weft_lustre.Element(msg) {
   let styled_attrs =
     attrs
-    |> list.prepend(
-      weft_lustre.styles(
-        list.flatten([
-          card_section_styles(theme: theme),
-          card_description_styles(theme: theme),
-        ]),
-      ),
-    )
+    |> list.prepend(weft_lustre.styles(card_description_styles(theme: theme)))
 
   headless_card.card_description(attrs: styled_attrs, children: children)
 }
 
 /// Render a styled card action section.
 pub fn card_action(
-  theme theme: theme.Theme,
+  theme _theme: theme.Theme,
   attrs attrs: List(weft_lustre.Attribute(msg)),
   children children: List(weft_lustre.Element(msg)),
 ) -> weft_lustre.Element(msg) {
   let styled_attrs =
     attrs
-    |> list.prepend(
-      weft_lustre.styles(
-        list.flatten([card_section_styles(theme: theme), card_action_styles()]),
-      ),
-    )
+    |> list.prepend(weft_lustre.styles(card_action_styles()))
 
   headless_card.card_action(attrs: styled_attrs, children: children)
 }
 
 /// Render a styled card content section.
 pub fn card_content(
-  theme theme: theme.Theme,
+  theme _theme: theme.Theme,
   attrs attrs: List(weft_lustre.Attribute(msg)),
   children children: List(weft_lustre.Element(msg)),
 ) -> weft_lustre.Element(msg) {
   let styled_attrs =
     attrs
-    |> list.prepend(
-      weft_lustre.styles(list.flatten([card_section_styles(theme: theme)])),
-    )
+    |> list.prepend(weft_lustre.styles(card_content_section_styles()))
 
   headless_card.card_content(attrs: styled_attrs, children: children)
 }
 
 /// Render a styled card footer section.
 pub fn card_footer(
-  theme theme: theme.Theme,
+  theme _theme: theme.Theme,
   attrs attrs: List(weft_lustre.Attribute(msg)),
   children children: List(weft_lustre.Element(msg)),
 ) -> weft_lustre.Element(msg) {
   let styled_attrs =
     attrs
-    |> list.prepend(weft_lustre.styles(card_section_styles(theme: theme)))
+    |> list.prepend(weft_lustre.styles(card_footer_section_styles()))
 
   headless_card.card_footer(attrs: styled_attrs, children: children)
 }

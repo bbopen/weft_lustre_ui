@@ -221,8 +221,8 @@ fn base_text_control_styles(
       color: border,
     ),
     weft.font_family(families: theme.font_families(t)),
-    weft.font_size(size: weft.rem(rem: 0.9375)),
-    weft.line_height(height: weft.line_height_multiple(multiplier: 1.3)),
+    weft.font_size(size: weft.rem(rem: 0.875)),
+    weft.line_height(height: weft.line_height_multiple(multiplier: 1.4)),
     weft.appearance(value: weft.appearance_none()),
     weft.outline_none(),
     weft.cursor(cursor: cursor),
@@ -287,9 +287,14 @@ pub fn text_input(
         ])
 
       let styles = base_text_control_styles(theme, disabled)
+      let select_styles =
+        list.append(styles, [
+          weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+          weft.padding_xy(x: 12, y: 6),
+        ])
 
       let all_attrs =
-        [weft_lustre.styles(styles), ..attrs]
+        [weft_lustre.styles(select_styles), ..attrs]
         |> list.append(required_html_attrs)
 
       weft_lustre.element_tag(
