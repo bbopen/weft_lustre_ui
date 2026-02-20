@@ -98,7 +98,7 @@ fn base_styles(
   theme theme: theme.Theme,
   size size: AvatarSize,
 ) -> List(weft.Attribute) {
-  let #(surface_bg, surface_fg) = theme.surface(theme)
+  let #(muted_bg, muted_fg) = theme.muted(theme)
   let px = size_px(size)
 
   [
@@ -109,8 +109,8 @@ fn base_styles(
     weft.justify_content(value: weft.justify_center()),
     weft.rounded(radius: weft.px(pixels: 9999)),
     weft.overflow(overflow: weft.overflow_hidden()),
-    weft.background(color: surface_bg),
-    weft.text_color(color: surface_fg),
+    weft.background(color: muted_bg),
+    weft.text_color(color: muted_fg),
     weft.border(
       width: weft.px(pixels: 1),
       style: weft.border_style_solid(),

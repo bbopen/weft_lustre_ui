@@ -33,6 +33,14 @@ pub opaque type Theme {
     space_md: Int,
     disabled_opacity: Float,
     font_adjustment: Option(FontAdjustment),
+    /// Subtle selected/active state — background and foreground pair.
+    /// Use for: active nav items, selected rows, focused dropdown options.
+    accent: #(weft.Color, weft.Color),
+    /// Subdued surface — background and foreground pair.
+    /// Use for: secondary badges, muted text areas, placeholder surfaces.
+    muted: #(weft.Color, weft.Color),
+    /// Translucent hover overlay applied over an element's background on hover.
+    hover_surface: weft.Color,
   )
 }
 
@@ -140,6 +148,15 @@ pub fn theme_default() -> Theme {
     space_md: 12,
     disabled_opacity: 0.6,
     font_adjustment: None,
+    accent: #(
+      weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.07),
+      weft.rgb(red: 9, green: 9, blue: 9),
+    ),
+    muted: #(
+      weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04),
+      weft.rgba(red: 63, green: 63, blue: 70, alpha: 0.85),
+    ),
+    hover_surface: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04),
   )
 }
 
@@ -200,6 +217,15 @@ pub fn theme_overlay_surface(
 /// Set the default border color used by components.
 pub fn theme_border(theme theme: Theme, color color: weft.Color) -> Theme {
   Theme(..theme, border_color: color)
+}
+
+/// Set the muted color pair — subdued background and foreground.
+pub fn theme_muted(
+  theme theme: Theme,
+  color color: weft.Color,
+  on_color on_color: weft.Color,
+) -> Theme {
+  Theme(..theme, muted: #(color, on_color))
 }
 
 /// Set the default muted text color used by components.
@@ -459,6 +485,27 @@ pub fn disabled_opacity(theme: Theme) -> Float {
 pub fn get_font_adjustment(theme: Theme) -> Option(FontAdjustment) {
   case theme {
     Theme(font_adjustment:, ..) -> font_adjustment
+  }
+}
+
+/// The accent color pair — background and foreground for selected/active states.
+pub fn accent(theme theme: Theme) -> #(weft.Color, weft.Color) {
+  case theme {
+    Theme(accent:, ..) -> accent
+  }
+}
+
+/// The muted color pair — subdued background and foreground.
+pub fn muted(theme theme: Theme) -> #(weft.Color, weft.Color) {
+  case theme {
+    Theme(muted:, ..) -> muted
+  }
+}
+
+/// The hover surface color — applied over element background on hover.
+pub fn hover_surface(theme theme: Theme) -> weft.Color {
+  case theme {
+    Theme(hover_surface:, ..) -> hover_surface
   }
 }
 

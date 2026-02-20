@@ -6,12 +6,20 @@ import weft_lustre
 import weft_lustre_ui/headless/button as headless_button
 
 /// A tabs trigger item.
-pub opaque type TabItem {
-  TabItem(value: String, label: String)
+pub opaque type TabItem(msg) {
+  TabItem(value: String, label: weft_lustre.Element(msg))
 }
 
-/// Construct a tabs trigger item.
-pub fn tab_item(value value: String, label label: String) -> TabItem {
+/// Construct a tab item with a text label.
+pub fn tab_item(value value: String, label label: String) -> TabItem(msg) {
+  TabItem(value: value, label: weft_lustre.text(content: label))
+}
+
+/// Construct a tab item with an element label (e.g., text + badge).
+pub fn tab_item_el(
+  value value: String,
+  label label: weft_lustre.Element(msg),
+) -> TabItem(msg) {
   TabItem(value: value, label: label)
 }
 
@@ -102,7 +110,7 @@ pub fn tabs_inactive_trigger_attrs(
 /// Render headless tabs.
 pub fn tabs(
   config config: TabsConfig(msg),
-  items items: List(TabItem),
+  items items: List(TabItem(msg)),
   content content: weft_lustre.Element(msg),
 ) -> weft_lustre.Element(msg) {
   case config {
@@ -139,7 +147,7 @@ pub fn tabs(
                       state_attrs,
                     ]),
                   ),
-                child: weft_lustre.text(content: item_label),
+                child: item_label,
               )
             }
           }

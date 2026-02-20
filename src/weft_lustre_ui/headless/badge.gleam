@@ -15,6 +15,7 @@ type Variant {
   Outline
   Ghost
   Link
+  Count
 }
 
 /// A badge visual variant for headless construction.
@@ -50,6 +51,11 @@ pub fn badge_ghost() -> BadgeVariant {
 /// Link-like badge variant.
 pub fn badge_link() -> BadgeVariant {
   BadgeVariant(value: Link)
+}
+
+/// Compact numeric count badge variant — minimal pill for short numbers.
+pub fn badge_count() -> BadgeVariant {
+  BadgeVariant(value: Count)
 }
 
 /// Headless badge configuration.

@@ -6,16 +6,24 @@ import weft_lustre_ui/headless/tabs as headless_tabs
 import weft_lustre_ui/theme
 
 /// Styled tab item alias.
-pub type TabItem =
-  headless_tabs.TabItem
+pub type TabItem(msg) =
+  headless_tabs.TabItem(msg)
 
 /// Styled tabs configuration alias.
 pub type TabsConfig(msg) =
   headless_tabs.TabsConfig(msg)
 
-/// Construct tab item.
-pub fn tab_item(value value: String, label label: String) -> TabItem {
+/// Construct tab item with a text label.
+pub fn tab_item(value value: String, label label: String) -> TabItem(msg) {
   headless_tabs.tab_item(value: value, label: label)
+}
+
+/// Construct tab item with an element label (e.g., text + badge).
+pub fn tab_item_el(
+  value value: String,
+  label label: weft_lustre.Element(msg),
+) -> TabItem(msg) {
+  headless_tabs.tab_item_el(value: value, label: label)
 }
 
 /// Construct tabs configuration.
@@ -136,7 +144,7 @@ fn trigger_inactive_styles() -> List(weft.Attribute) {
 pub fn tabs(
   theme theme: theme.Theme,
   config config: TabsConfig(msg),
-  items items: List(TabItem),
+  items items: List(TabItem(msg)),
   content content: weft_lustre.Element(msg),
 ) -> weft_lustre.Element(msg) {
   let wrapped_content =

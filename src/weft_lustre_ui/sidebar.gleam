@@ -1,5 +1,6 @@
 //// Styled sidebar shell for weft_lustre_ui.
 
+import gleam/option.{type Option, None, Some}
 import weft
 import weft_lustre
 import weft_lustre_ui/headless/sidebar as headless_sidebar
@@ -203,5 +204,241 @@ pub fn sidebar(
       child: footer,
     ),
     inset: inset,
+  )
+}
+
+/// Styled nav group container — optional label + list of menu items.
+pub fn sidebar_group(
+  theme theme: theme.Theme,
+  label label: Option(String),
+  children children: List(weft_lustre.Element(msg)),
+) -> weft_lustre.Element(msg) {
+  let label_el = case label {
+    None -> weft_lustre.none()
+    Some(text) ->
+      weft_lustre.el(
+        attrs: [
+          weft_lustre.styles([
+            weft.font_size(size: weft.rem(rem: 0.75)),
+            weft.font_weight(weight: weft.font_weight_value(weight: 600)),
+            weft.text_color(color: theme.muted_text(theme)),
+            weft.padding_xy(x: 8, y: 2),
+          ]),
+        ],
+        child: weft_lustre.text(content: text),
+      )
+  }
+  weft_lustre.column(
+    attrs: [
+      weft_lustre.styles([
+        weft.spacing(pixels: 4),
+        weft.width(length: weft.fill()),
+      ]),
+    ],
+    children: [label_el, ..children],
+  )
+}
+
+/// Styled ordered list (`<ul>`) wrapper for nav items.
+pub fn sidebar_menu(
+  children children: List(weft_lustre.Element(msg)),
+) -> weft_lustre.Element(msg) {
+  weft_lustre.element_tag(
+    tag: "ul",
+    base_weft_attrs: [weft.el_layout()],
+    attrs: [
+      weft_lustre.styles([
+        weft.padding(pixels: 0),
+        weft.margin(pixels: 0),
+        weft.spacing(pixels: 2),
+        weft.width(length: weft.fill()),
+      ]),
+    ],
+    children: children,
+  )
+}
+
+/// Styled single nav item container (`<li>`).
+pub fn sidebar_menu_item(
+  children children: List(weft_lustre.Element(msg)),
+) -> weft_lustre.Element(msg) {
+  let item = headless_sidebar.sidebar_menu_item(children: children)
+  weft_lustre.el(
+    attrs: [
+      weft_lustre.styles([
+        weft.position(value: weft.position_relative()),
+        weft.width(length: weft.fill()),
+      ]),
+    ],
+    child: item,
+  )
+}
+
+/// Configuration alias for styled sidebar menu button.
+pub type SidebarMenuButtonConfig(msg) =
+  headless_sidebar.SidebarMenuButtonConfig(msg)
+
+/// Construct a sidebar menu button config.
+pub fn sidebar_menu_button_config(
+  label label: weft_lustre.Element(msg),
+) -> SidebarMenuButtonConfig(msg) {
+  headless_sidebar.sidebar_menu_button_config(label: label)
+}
+
+/// Mark the button as the currently active nav item.
+pub fn sidebar_menu_button_active(
+  config config: SidebarMenuButtonConfig(msg),
+) -> SidebarMenuButtonConfig(msg) {
+  headless_sidebar.sidebar_menu_button_active(config: config)
+}
+
+/// Set the click handler on the menu button.
+pub fn sidebar_menu_button_on_click(
+  config config: SidebarMenuButtonConfig(msg),
+  on_click on_click: fn() -> msg,
+) -> SidebarMenuButtonConfig(msg) {
+  headless_sidebar.sidebar_menu_button_on_click(
+    config: config,
+    on_click: on_click,
+  )
+}
+
+/// Set the href on the menu button (renders as `<a>` instead of `<button>`).
+pub fn sidebar_menu_button_href(
+  config config: SidebarMenuButtonConfig(msg),
+  href href: String,
+) -> SidebarMenuButtonConfig(msg) {
+  headless_sidebar.sidebar_menu_button_href(config: config, href: href)
+}
+
+/// Append extra attributes to the menu button.
+pub fn sidebar_menu_button_attrs(
+  config config: SidebarMenuButtonConfig(msg),
+  attrs attrs: List(weft_lustre.Attribute(msg)),
+) -> SidebarMenuButtonConfig(msg) {
+  headless_sidebar.sidebar_menu_button_attrs(config: config, attrs: attrs)
+}
+
+/// Styled nav action/link button.
+pub fn sidebar_menu_button(
+  theme theme: theme.Theme,
+  config config: SidebarMenuButtonConfig(msg),
+) -> weft_lustre.Element(msg) {
+  let #(surface_bg, surface_fg) = theme.surface(theme)
+  let #(accent_bg, accent_fg) = theme.accent(theme: theme)
+  let active = headless_sidebar.sidebar_menu_button_is_active(config: config)
+  let #(bg, fg) = case active {
+    True -> #(accent_bg, accent_fg)
+    False -> #(surface_bg, surface_fg)
+  }
+  let base_styles = [
+    weft.display(value: weft.display_flex()),
+    weft.align_items(value: weft.align_items_center()),
+    weft.spacing(pixels: 8),
+    weft.width(length: weft.fill()),
+    weft.padding_xy(x: 8, y: 6),
+    weft.rounded(radius: theme.radius_md(theme)),
+    weft.background(color: bg),
+    weft.text_color(color: fg),
+    weft.font_size(size: weft.rem(rem: 0.875)),
+    weft.font_weight(weight: weft.font_weight_normal()),
+    weft.cursor(cursor: weft.cursor_pointer()),
+    weft.mouse_over(attrs: [
+      weft.background(color: theme.hover_surface(theme: theme)),
+    ]),
+  ]
+  headless_sidebar.sidebar_menu_button(
+    config: headless_sidebar.sidebar_menu_button_attrs(config: config, attrs: [
+      weft_lustre.styles(base_styles),
+    ]),
+  )
+}
+
+/// Configuration alias for styled sidebar menu action.
+pub type SidebarMenuActionConfig(msg) =
+  headless_sidebar.SidebarMenuActionConfig(msg)
+
+/// Construct a sidebar menu action config.
+pub fn sidebar_menu_action_config(
+  on_click on_click: fn() -> msg,
+) -> SidebarMenuActionConfig(msg) {
+  headless_sidebar.sidebar_menu_action_config(on_click: on_click)
+}
+
+/// Make this action button visible only when the parent menu item is hovered.
+pub fn sidebar_menu_action_show_on_hover(
+  config config: SidebarMenuActionConfig(msg),
+) -> SidebarMenuActionConfig(msg) {
+  headless_sidebar.sidebar_menu_action_show_on_hover(config: config)
+}
+
+/// Append extra attributes to the action button.
+pub fn sidebar_menu_action_attrs(
+  config config: SidebarMenuActionConfig(msg),
+  attrs attrs: List(weft_lustre.Attribute(msg)),
+) -> SidebarMenuActionConfig(msg) {
+  headless_sidebar.sidebar_menu_action_attrs(config: config, attrs: attrs)
+}
+
+/// Styled action button that can optionally reveal only on hover.
+pub fn sidebar_menu_action(
+  theme theme: theme.Theme,
+  config config: SidebarMenuActionConfig(msg),
+  content content: weft_lustre.Element(msg),
+) -> weft_lustre.Element(msg) {
+  let action_styles = [
+    weft.position(value: weft.position_absolute()),
+    weft.right(length: weft.px(pixels: 4)),
+    weft.top(length: weft.pct(pct: 50.0)),
+    weft.transform(items: [
+      weft.translate(x: weft.px(pixels: 0), y: weft.pct(pct: -50.0)),
+    ]),
+    weft.display(value: weft.display_flex()),
+    weft.align_items(value: weft.align_items_center()),
+    weft.justify_content(value: weft.justify_center()),
+    weft.width(length: weft.fixed(length: weft.px(pixels: 24))),
+    weft.height(length: weft.fixed(length: weft.px(pixels: 24))),
+    weft.rounded(radius: theme.radius_md(theme)),
+    weft.cursor(cursor: weft.cursor_pointer()),
+    weft.mouse_over(attrs: [
+      weft.background(color: theme.hover_surface(theme: theme)),
+    ]),
+  ]
+  headless_sidebar.sidebar_menu_action(
+    config: headless_sidebar.sidebar_menu_action_attrs(config: config, attrs: [
+      weft_lustre.styles(action_styles),
+    ]),
+    content: content,
+  )
+}
+
+/// Styled inline count badge for nav items.
+pub fn sidebar_menu_badge(
+  theme theme: theme.Theme,
+  text text: String,
+) -> weft_lustre.Element(msg) {
+  let #(muted_bg, muted_fg) = theme.muted(theme: theme)
+  let badge_styles = [
+    weft.display(value: weft.display_inline_flex()),
+    weft.align_items(value: weft.align_items_center()),
+    weft.justify_content(value: weft.justify_center()),
+    weft.width(length: weft.minimum(
+      base: weft.shrink(),
+      min: weft.px(pixels: 20),
+    )),
+    weft.height(length: weft.fixed(length: weft.px(pixels: 20))),
+    weft.padding_xy(x: 4, y: 0),
+    weft.rounded(radius: weft.px(pixels: 9999)),
+    weft.background(color: muted_bg),
+    weft.text_color(color: muted_fg),
+    weft.font_size(size: weft.rem(rem: 0.75)),
+    weft.font_weight(weight: weft.font_weight_value(weight: 600)),
+    weft.text_align(align: weft.text_align_center()),
+  ]
+  weft_lustre.element_tag(
+    tag: "span",
+    base_weft_attrs: [weft.el_layout()],
+    attrs: [weft_lustre.styles(badge_styles)],
+    children: [weft_lustre.text(content: text)],
   )
 }

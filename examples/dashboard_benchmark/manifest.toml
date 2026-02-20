@@ -26,6 +26,7 @@ packages = [
   { name = "tom", version = "2.0.1", build_tools = ["gleam"], requirements = ["gleam_stdlib", "gleam_time"], otp_app = "tom", source = "hex", outer_checksum = "90791DA4AACE637E30081FE77049B8DB850FBC8CACC31515376BCC4E59BE1DD2" },
   { name = "weft", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "local", path = "../../../weft" },
   { name = "weft_chart", version = "0.2.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "lustre"], source = "local", path = "../../../weft_chart" },
+  { name = "weft_icons", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "lustre"], source = "local", path = "../../../weft_icons" },
   { name = "weft_lustre", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_javascript", "gleam_stdlib", "lustre", "plinth", "weft"], source = "local", path = "../../../weft_lustre" },
   { name = "weft_lustre_ui", version = "0.1.0", build_tools = ["gleam"], requirements = ["gleam_stdlib", "lustre", "weft", "weft_lustre"], source = "local", path = "../.." },
 ]
@@ -37,5 +38,6 @@ plinth = { path = "../../../weft_lustre/vendor/plinth" }
 startest = { version = ">= 0.8.0" }
 weft = { path = "../../../weft" }
 weft_chart = { path = "../../../weft_chart" }
+weft_icons = { path = "../../../weft_icons" }
 weft_lustre = { path = "../../../weft_lustre" }
 weft_lustre_ui = { path = "../.." }

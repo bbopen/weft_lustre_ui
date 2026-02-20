@@ -16,6 +16,7 @@ type Variant {
   Outline
   Ghost
   Link
+  Count
 }
 
 type Style {
@@ -63,6 +64,11 @@ pub fn badge_link() -> BadgeVariant {
   BadgeVariant(value: Link)
 }
 
+/// Compact numeric count badge variant — minimal pill for short numbers.
+pub fn badge_count() -> BadgeVariant {
+  BadgeVariant(value: Count)
+}
+
 /// Styled badge configuration.
 pub opaque type BadgeConfig(msg) {
   BadgeConfig(variant: BadgeVariant, attrs: List(weft_lustre.Attribute(msg)))
@@ -103,6 +109,7 @@ fn variant_styles(
   let #(primary_bg, primary_fg) = theme.primary(theme)
   let #(danger_bg, danger_fg) = theme.danger(theme)
   let #(surface_bg, surface_fg) = theme.surface(theme)
+  let #(muted_bg, muted_fg) = theme.muted(theme)
 
   case variant {
     BadgeVariant(value: Default) ->
@@ -156,6 +163,15 @@ fn variant_styles(
         foreground: primary_fg,
         border: None,
         hover_decoration: True,
+        hover_offset: False,
+      )
+
+    BadgeVariant(value: Count) ->
+      Style(
+        background: muted_bg,
+        foreground: muted_fg,
+        border: None,
+        hover_decoration: False,
         hover_offset: False,
       )
   }
@@ -228,6 +244,39 @@ fn badge_styles(
   ])
 }
 
+fn badge_count_styles(
+  theme theme: theme.Theme,
+  variant variant: BadgeVariant,
+) -> List(weft.Attribute) {
+  let style = variant_styles(theme: theme, variant: variant)
+
+  [
+    weft.display(value: weft.display_inline_flex()),
+    weft.align_items(value: weft.align_items_center()),
+    weft.justify_content(value: weft.justify_center()),
+    weft.width(length: weft.minimum(
+      base: weft.shrink(),
+      min: weft.px(pixels: 20),
+    )),
+    weft.height(length: weft.fixed(length: weft.px(pixels: 20))),
+    weft.padding_xy(x: 4, y: 0),
+    weft.rounded(radius: weft.px(pixels: 9999)),
+    weft.font_size(size: weft.rem(rem: 0.75)),
+    weft.line_height(height: weft.line_height_multiple(multiplier: 1.0)),
+    weft.font_weight(weight: weft.font_weight_value(weight: 600)),
+    weft.text_color(color: style.foreground),
+    weft.background(color: style.background),
+    weft.user_select(value: weft.user_select_none()),
+  ]
+}
+
+fn is_count_variant(variant: BadgeVariant) -> Bool {
+  case variant {
+    BadgeVariant(value: Count) -> True
+    _ -> False
+  }
+}
+
 /// Render a styled badge.
 pub fn badge(
   theme theme: theme.Theme,
@@ -235,15 +284,18 @@ pub fn badge(
   child child: weft_lustre.Element(msg),
 ) -> weft_lustre.Element(msg) {
   case config {
-    BadgeConfig(variant: variant, attrs: attrs) ->
+    BadgeConfig(variant: variant, attrs: attrs) -> {
+      let styles = case is_count_variant(variant) {
+        True -> badge_count_styles(theme: theme, variant: variant)
+        False -> badge_styles(theme: theme, variant: variant)
+      }
+
       weft_lustre.element_tag(
         tag: "span",
         base_weft_attrs: [weft.el_layout()],
-        attrs: [
-          weft_lustre.styles(badge_styles(theme: theme, variant: variant)),
-          ..attrs
-        ],
+        attrs: [weft_lustre.styles(styles), ..attrs],
         children: [child],
       )
+    }
   }
 }

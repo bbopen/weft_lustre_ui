@@ -9,8 +9,6 @@ import lustre
 import lustre/attribute
 import lustre/effect
 import lustre/element as html_element
-import lustre/element/html as html_el
-import lustre/element/svg as svg_el
 import lustre/event
 import plinth/browser/window
 import weft
@@ -21,6 +19,7 @@ import weft_chart/grid as wc_grid
 import weft_chart/series/area as wc_area
 import weft_chart/series/common as wc_common
 import weft_chart/tooltip as wc_tooltip
+import weft_icons
 import weft_lustre
 import weft_lustre/modal
 import weft_lustre_ui
@@ -35,6 +34,7 @@ import weft_lustre_ui/select
 import weft_lustre_ui/sheet
 import weft_lustre_ui/sidebar
 import weft_lustre_ui/sonner
+import weft_lustre_ui/switch
 import weft_lustre_ui/table
 import weft_lustre_ui/theme as ui_theme
 import weft_lustre_ui/toggle_group
@@ -79,7 +79,7 @@ type AppState {
     toast_open: Bool,
     table_rows: List(TableRow),
     drag: Option(DragState),
-    reviewer_open: Option(String),
+    reviewer_open: Option(#(String, Int, Int)),
     nav_menu_open: Option(#(String, Int, Int)),
     visible_columns: List(String),
   )
@@ -107,7 +107,8 @@ pub type Msg {
   DragStart(index: Int, y: Float)
   DragMove(y: Float)
   DragEnd
-  ReviewerOpenChanged(Option(String))
+  ReviewerOpenChanged(Option(#(String, Int, Int)))
+  ReviewerSelected(row_id: String, value: String)
   NavMenuOpenChanged(Option(#(String, Int, Int)))
   ToggleColumn(String)
 }
@@ -183,7 +184,7 @@ fn initial_table_rows() -> List(TableRow) {
       status: "In Process",
       target: "18",
       limit: "5",
-      reviewer: "eddie_lake",
+      reviewer: "assign",
       reviewer_is_select: True,
     ),
     TableRow(
@@ -193,7 +194,7 @@ fn initial_table_rows() -> List(TableRow) {
       status: "Done",
       target: "29",
       limit: "24",
-      reviewer: "eddie_lake",
+      reviewer: "assign",
       reviewer_is_select: True,
     ),
     TableRow(
@@ -203,7 +204,7 @@ fn initial_table_rows() -> List(TableRow) {
       status: "Done",
       target: "10",
       limit: "13",
-      reviewer: "avery_lucas",
+      reviewer: "assign",
       reviewer_is_select: True,
     ),
     TableRow(
@@ -419,53 +420,6 @@ fn text_small_strong(content: String) -> weft_lustre.Element(msg) {
   )
 }
 
-fn icon_stroke(paths paths: List(String)) -> weft_lustre.Element(msg) {
-  weft_lustre.html(html_element.namespaced(
-    "http://www.w3.org/2000/svg",
-    "svg",
-    [
-      attribute.attribute("width", "18"),
-      attribute.attribute("height", "18"),
-      attribute.attribute("viewBox", "0 0 24 24"),
-      attribute.attribute("fill", "none"),
-      attribute.attribute("stroke", "currentColor"),
-      attribute.attribute("stroke-width", "2"),
-      attribute.attribute("stroke-linecap", "round"),
-      attribute.attribute("stroke-linejoin", "round"),
-    ],
-    list.map(paths, fn(d) {
-      html_element.namespaced(
-        "http://www.w3.org/2000/svg",
-        "path",
-        [attribute.attribute("d", d)],
-        [],
-      )
-    }),
-  ))
-}
-
-fn icon_filled(paths paths: List(String)) -> weft_lustre.Element(msg) {
-  weft_lustre.html(html_element.namespaced(
-    "http://www.w3.org/2000/svg",
-    "svg",
-    [
-      attribute.attribute("width", "18"),
-      attribute.attribute("height", "18"),
-      attribute.attribute("viewBox", "0 0 24 24"),
-      attribute.attribute("fill", "currentColor"),
-      attribute.attribute("stroke", "none"),
-    ],
-    list.map(paths, fn(d) {
-      html_element.namespaced(
-        "http://www.w3.org/2000/svg",
-        "path",
-        [attribute.attribute("d", d)],
-        [],
-      )
-    }),
-  ))
-}
-
 fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
   let #(input_surface_bg, _) = ui_theme.input_surface(theme)
 
@@ -617,16 +571,19 @@ fn insights_table(
   let #(input_surface_bg, _) = ui_theme.input_surface(theme)
 
   let reviewer_options: List(#(String, String)) = [
-    #("assign", "Assign reviewer"),
     #("eddie_lake", "Eddie Lake"),
     #("jamik_tashpulatov", "Jamik Tashpulatov"),
     #("avery_lucas", "Avery Lucas"),
   ]
 
   let reviewer_label = fn(value: String) {
-    case list.find(reviewer_options, fn(opt) { opt.0 == value }) {
-      Ok(#(_, lbl)) -> lbl
-      Error(_) -> value
+    case value {
+      "assign" -> "Assign reviewer"
+      _ ->
+        case list.find(reviewer_options, fn(opt) { opt.0 == value }) {
+          Ok(#(_, lbl)) -> lbl
+          Error(_) -> value
+        }
     }
   }
 
@@ -692,50 +649,7 @@ fn insights_table(
     )
   }
 
-  let grip_icon =
-    weft_lustre.html(
-      svg_el.svg(
-        [
-          attribute.attribute("width", "16"),
-          attribute.attribute("height", "16"),
-          attribute.attribute("viewBox", "0 0 24 24"),
-          attribute.attribute("fill", "currentColor"),
-          attribute.attribute("stroke", "none"),
-        ],
-        [
-          svg_el.circle([
-            attribute.attribute("cx", "9"),
-            attribute.attribute("cy", "5"),
-            attribute.attribute("r", "1"),
-          ]),
-          svg_el.circle([
-            attribute.attribute("cx", "9"),
-            attribute.attribute("cy", "12"),
-            attribute.attribute("r", "1"),
-          ]),
-          svg_el.circle([
-            attribute.attribute("cx", "9"),
-            attribute.attribute("cy", "19"),
-            attribute.attribute("r", "1"),
-          ]),
-          svg_el.circle([
-            attribute.attribute("cx", "15"),
-            attribute.attribute("cy", "5"),
-            attribute.attribute("r", "1"),
-          ]),
-          svg_el.circle([
-            attribute.attribute("cx", "15"),
-            attribute.attribute("cy", "12"),
-            attribute.attribute("r", "1"),
-          ]),
-          svg_el.circle([
-            attribute.attribute("cx", "15"),
-            attribute.attribute("cy", "19"),
-            attribute.attribute("r", "1"),
-          ]),
-        ],
-      ),
-    )
+  let grip_icon = weft_lustre.html(weft_icons.grip_vertical([]))
 
   let section_type_badge = fn(section_type: String) {
     badge.badge(
@@ -754,65 +668,8 @@ fn insights_table(
 
   let status_icon = fn(status: String) {
     let icon = case status {
-      "Done" ->
-        weft_lustre.html(
-          svg_el.svg(
-            [
-              attribute.attribute("width", "16"),
-              attribute.attribute("height", "16"),
-              attribute.attribute("viewBox", "0 0 24 24"),
-              attribute.attribute("fill", "#22c55e"),
-              attribute.attribute("stroke", "none"),
-            ],
-            [
-              svg_el.path([
-                attribute.attribute(
-                  "d",
-                  "M17 3.34a10 10 0 1 1-14.995 8.984L2 12l.005-.324A10 10 0 0 1 17 3.34zm-1.293 5.953a1 1 0 0 0-1.32-.083l-.094.083L11 12.585l-1.293-1.292-.094-.083a1 1 0 0 0-1.403 1.403l.083.094 2 2 .094.083a1 1 0 0 0 1.226 0l.094-.083 4-4 .083-.094a1 1 0 0 0-.083-1.32z",
-                ),
-              ]),
-            ],
-          ),
-        )
-      _ ->
-        weft_lustre.html(
-          svg_el.svg(
-            [
-              attribute.attribute("width", "16"),
-              attribute.attribute("height", "16"),
-              attribute.attribute("viewBox", "0 0 24 24"),
-              attribute.attribute("fill", "none"),
-              attribute.attribute("stroke", "#737373"),
-              attribute.attribute("stroke-width", "2"),
-            ],
-            [
-              svg_el.path([
-                attribute.attribute("d", "M12 6l0 -3"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M16.25 7.75l2.15 -2.15"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M18 12l3 0"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M16.25 16.25l2.15 2.15"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M12 18l0 3"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M7.75 16.25l-2.15 2.15"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M6 12l-3 0"),
-              ]),
-              svg_el.path([
-                attribute.attribute("d", "M7.75 7.75l-2.15 -2.15"),
-              ]),
-            ],
-          ),
-        )
+      "Done" -> weft_lustre.html(weft_icons.circle_check_filled([]))
+      _ -> weft_lustre.html(weft_icons.loader([]))
     }
 
     weft_lustre.row(
@@ -834,107 +691,220 @@ fn insights_table(
       False -> weft_lustre.text(content: reviewer)
       True -> {
         let label = reviewer_label(reviewer)
-        let is_open = state.reviewer_open == Some(row_id)
+        let is_open = case state.reviewer_open {
+          Some(#(id, _, _)) -> id == row_id
+          None -> False
+        }
+        let #(overlay_bg, _overlay_fg) = ui_theme.overlay_surface(theme)
         let #(_, surface_fg) = ui_theme.surface(theme)
 
-        popover.popover(
-          theme: theme,
-          config: popover.popover_config(open: is_open, on_toggle: fn(open) {
-            ReviewerOpenChanged(case open {
-              True -> Some(row_id)
-              False -> None
-            })
-          })
-            |> popover.popover_attrs(attrs: [
-              weft_lustre.styles([
-                weft.align_items(value: weft.align_items_center()),
-              ]),
-            ])
-            |> popover.popover_trigger_attrs(attrs: [
+        let trigger_btn =
+          weft_lustre.element_tag(
+            tag: "button",
+            base_weft_attrs: [weft.el_layout()],
+            attrs: [
               weft_lustre.html_attribute(attribute.id(row_id <> "-reviewer")),
+              weft_lustre.html_attribute(attribute.type_("button")),
+              weft_lustre.html_attribute(
+                event.on("click", case is_open {
+                  True -> decode.success(ReviewerOpenChanged(None))
+                  False -> {
+                    use x <- decode.field("clientX", decode.int)
+                    use y <- decode.field("clientY", decode.int)
+                    decode.success(ReviewerOpenChanged(Some(#(row_id, x, y))))
+                  }
+                }),
+              ),
               weft_lustre.styles([
+                weft.display(value: weft.display_inline_flex()),
+                weft.align_items(value: weft.align_items_center()),
+                weft.justify_content(value: weft.justify_space_between()),
                 weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
                 weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
-                weft.justify_content(value: weft.justify_space_between()),
                 weft.padding_xy(x: 8, y: 0),
+                weft.rounded(radius: ui_theme.radius_md(theme)),
+                weft.border(
+                  width: weft.px(pixels: 1),
+                  style: weft.border_style_solid(),
+                  color: ui_theme.border_color(theme),
+                ),
+                weft.background(color: input_surface_bg),
                 weft.font_size(size: weft.rem(rem: 0.875)),
-                weft.text_color(color: ui_theme.muted_text(theme)),
-              ]),
-            ])
-            |> popover.popover_panel_attrs(attrs: [
-              weft_lustre.styles([
-                weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
-                weft.padding_xy(x: 4, y: 4),
-                weft.spacing(pixels: 2),
-              ]),
-            ]),
-          trigger: weft_lustre.row(
-            attrs: [
-              weft_lustre.styles([
-                weft.spacing(pixels: 4),
-                weft.align_items(value: weft.align_items_center()),
-                weft.width(length: weft.fill()),
+                weft.text_color(color: case reviewer {
+                  "assign" -> ui_theme.muted_text(theme)
+                  _ -> surface_fg
+                }),
+                weft.text_align(align: weft.text_align_left()),
+                weft.outline_none(),
+                weft.appearance(value: weft.appearance_none()),
+                weft.cursor(cursor: weft.cursor_pointer()),
               ]),
             ],
             children: [
-              weft_lustre.el(
-                attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
-                child: weft_lustre.text(content: label),
-              ),
-              icon_stroke(paths: ["M6 9l6 6l6 -6"]),
-            ],
-          ),
-          panel: weft_lustre.column(
-            attrs: [weft_lustre.styles([weft.spacing(pixels: 2)])],
-            children: list.map(reviewer_options, fn(opt) {
-              let #(opt_value, opt_label) = opt
-              let is_selected = opt_value == reviewer
-              weft_lustre.element_tag(
-                tag: "button",
-                base_weft_attrs: [weft.el_layout()],
+              weft_lustre.row(
                 attrs: [
-                  weft_lustre.html_attribute(attribute.type_("button")),
+                  weft_lustre.styles([
+                    weft.spacing(pixels: 4),
+                    weft.align_items(value: weft.align_items_center()),
+                    weft.width(length: weft.fill()),
+                  ]),
+                ],
+                children: [
+                  weft_lustre.el(
+                    attrs: [
+                      weft_lustre.styles([weft.width(length: weft.fill())]),
+                    ],
+                    child: weft_lustre.text(content: label),
+                  ),
+                  weft_lustre.html(weft_icons.chevron_down([])),
+                ],
+              ),
+            ],
+          )
+
+        let overlay = case state.reviewer_open {
+          Some(#(id, click_x, click_y)) if id == row_id -> {
+            let panel_card =
+              weft_lustre.el(
+                attrs: [
+                  weft_lustre.html_attribute(
+                    event.advanced("click", {
+                      decode.success(event.handler(
+                        dispatch: TableNoop,
+                        prevent_default: False,
+                        stop_propagation: True,
+                      ))
+                    }),
+                  ),
+                  weft_lustre.styles([
+                    weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
+                    weft.padding_xy(x: 4, y: 4),
+                    weft.background(color: overlay_bg),
+                    weft.text_color(color: surface_fg),
+                    weft.border(
+                      width: weft.px(pixels: 1),
+                      style: weft.border_style_solid(),
+                      color: ui_theme.border_color(theme),
+                    ),
+                    weft.rounded(radius: ui_theme.radius_md(theme)),
+                    weft.shadows(shadows: [
+                      weft.shadow(
+                        x: weft.px(pixels: 0),
+                        y: weft.px(pixels: 4),
+                        blur: weft.px(pixels: 16),
+                        spread: weft.px(pixels: -2),
+                        color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.15),
+                      ),
+                    ]),
+                  ]),
+                ],
+                child: weft_lustre.column(
+                  attrs: [weft_lustre.styles([weft.spacing(pixels: 2)])],
+                  children: list.map(reviewer_options, fn(opt) {
+                    let #(opt_value, opt_label) = opt
+                    let is_selected = opt_value == reviewer
+                    weft_lustre.element_tag(
+                      tag: "button",
+                      base_weft_attrs: [weft.el_layout()],
+                      attrs: [
+                        weft_lustre.html_attribute(attribute.type_("button")),
+                        weft_lustre.html_attribute(
+                          event.on_click(ReviewerSelected(
+                            row_id: row_id,
+                            value: opt_value,
+                          )),
+                        ),
+                        weft_lustre.styles([
+                          weft.display(value: weft.display_flex()),
+                          weft.align_items(value: weft.align_items_center()),
+                          weft.text_align(align: weft.text_align_left()),
+                          weft.padding_xy(x: 8, y: 6),
+                          weft.rounded(radius: ui_theme.radius_md(theme)),
+                          weft.font_size(size: weft.rem(rem: 0.875)),
+                          weft.cursor(cursor: weft.cursor_pointer()),
+                          weft.background(color: case is_selected {
+                            True ->
+                              weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.06)
+                            False ->
+                              weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)
+                          }),
+                          weft.border(
+                            width: weft.px(pixels: 0),
+                            style: weft.border_style_solid(),
+                            color: weft.rgba(
+                              red: 0,
+                              green: 0,
+                              blue: 0,
+                              alpha: 0.0,
+                            ),
+                          ),
+                          weft.mouse_over(attrs: [
+                            weft.background(color: case state.switch_on {
+                              True ->
+                                weft.rgba(
+                                  red: 255,
+                                  green: 255,
+                                  blue: 255,
+                                  alpha: 0.06,
+                                )
+                              False ->
+                                weft.rgba(
+                                  red: 0,
+                                  green: 0,
+                                  blue: 0,
+                                  alpha: 0.04,
+                                )
+                            }),
+                          ]),
+                          weft.text_color(color: surface_fg),
+                        ]),
+                      ],
+                      children: [weft_lustre.text(content: opt_label)],
+                    )
+                  }),
+                ),
+              )
+
+            weft_lustre.column(attrs: [], children: [
+              weft_lustre.in_front(child: weft_lustre.el(
+                attrs: [
+                  weft_lustre.styles([
+                    weft.position(value: weft.position_fixed()),
+                    weft.inset(length: weft.px(pixels: 0)),
+                  ]),
                   weft_lustre.html_attribute(
                     event.on_click(ReviewerOpenChanged(None)),
                   ),
-                  weft_lustre.styles([
-                    weft.display(value: weft.display_flex()),
-                    weft.align_items(value: weft.align_items_center()),
-                    weft.width(length: weft.fill()),
-                    weft.padding_xy(x: 8, y: 4),
-                    weft.rounded(radius: ui_theme.radius_md(theme)),
-                    weft.font_size(size: weft.rem(rem: 0.875)),
-                    weft.cursor(cursor: weft.cursor_pointer()),
-                    weft.background(color: case is_selected {
-                      True -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.06)
-                      False -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)
-                    }),
-                    weft.border(
-                      width: weft.px(pixels: 0),
-                      style: weft.border_style_solid(),
-                      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
-                    ),
-                    weft.mouse_over(attrs: [
-                      weft.background(color: case state.switch_on {
-                        True ->
-                          weft.rgba(
-                            red: 255,
-                            green: 255,
-                            blue: 255,
-                            alpha: 0.06,
-                          )
-                        False ->
-                          weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04)
-                      }),
-                    ]),
-                    weft.text_color(color: surface_fg),
-                  ]),
                 ],
-                children: [weft_lustre.text(content: opt_label)],
-              )
-            }),
-          ),
-        )
+                child: weft_lustre.none(),
+              )),
+              weft_lustre.anchored_overlay(
+                layer: weft_lustre.layer_in_front(),
+                anchor: weft.rect(
+                  x: click_x - 80,
+                  y: click_y - 16,
+                  width: 160,
+                  height: 32,
+                ),
+                overlay_size: weft.size(width: 160, height: 120),
+                viewport: weft.rect(
+                  x: 0,
+                  y: 0,
+                  width: state.viewport_width,
+                  height: state.viewport_height,
+                ),
+                preferred_sides: [
+                  weft.overlay_side_below(),
+                  weft.overlay_side_above(),
+                ],
+                child: panel_card,
+              ),
+            ])
+          }
+          _ -> weft_lustre.none()
+        }
+
+        weft_lustre.column(attrs: [], children: [trigger_btn, overlay])
       }
     }
   }
@@ -1109,51 +1079,7 @@ fn insights_table(
         ),
         table.table_cell(
           attrs: [],
-          child: weft_lustre.html(
-            html_element.namespaced(
-              "http://www.w3.org/2000/svg",
-              "svg",
-              [
-                attribute.attribute("width", "16"),
-                attribute.attribute("height", "16"),
-                attribute.attribute("viewBox", "0 0 24 24"),
-                attribute.attribute("fill", "currentColor"),
-                attribute.attribute("stroke", "none"),
-              ],
-              [
-                html_element.namespaced(
-                  "http://www.w3.org/2000/svg",
-                  "circle",
-                  [
-                    attribute.attribute("cx", "12"),
-                    attribute.attribute("cy", "5"),
-                    attribute.attribute("r", "1"),
-                  ],
-                  [],
-                ),
-                html_element.namespaced(
-                  "http://www.w3.org/2000/svg",
-                  "circle",
-                  [
-                    attribute.attribute("cx", "12"),
-                    attribute.attribute("cy", "12"),
-                    attribute.attribute("r", "1"),
-                  ],
-                  [],
-                ),
-                html_element.namespaced(
-                  "http://www.w3.org/2000/svg",
-                  "circle",
-                  [
-                    attribute.attribute("cx", "12"),
-                    attribute.attribute("cy", "19"),
-                    attribute.attribute("r", "1"),
-                  ],
-                  [],
-                ),
-              ],
-            ),
-          ),
+          child: weft_lustre.html(weft_icons.more_vertical([])),
         ),
       ],
     )
@@ -1367,9 +1293,7 @@ fn benchmark_tabs(
                         weft.justify_content(value: weft.justify_center()),
                       ]),
                     ]),
-                  label: icon_stroke(paths: [
-                    "M15 6l-6 6l6 6",
-                  ]),
+                  label: weft_lustre.html(weft_icons.chevron_left([])),
                 ),
                 button.button(
                   theme: theme,
@@ -1388,9 +1312,7 @@ fn benchmark_tabs(
                         weft.justify_content(value: weft.justify_center()),
                       ]),
                     ]),
-                  label: icon_stroke(paths: [
-                    "M9 6l6 6l-6 6",
-                  ]),
+                  label: weft_lustre.html(weft_icons.chevron_right([])),
                 ),
               ],
             ),
@@ -1418,8 +1340,12 @@ fn benchmark_tabs(
             dp(label: "Thu", desktop: 55, mobile: 38),
             dp(label: "Fri", desktop: 61, mobile: 42),
           ],
-          width: 400,
+          width: wc.FillWidth,
           height: 200,
+          theme: Some(case state.switch_on {
+            True -> wc.chart_theme_dark()
+            False -> wc.chart_theme_light()
+          }),
           children: [
             wc.cartesian_grid(
               wc_grid.cartesian_grid_config()
@@ -1594,15 +1520,13 @@ fn benchmark_tabs(
       attrs: [
         weft_lustre.html_attribute(attribute.id(benchmark_tab_list_id)),
         weft_lustre.html_attribute(attribute.role("tablist")),
-        weft_lustre.html_attribute(attribute.style("width", "fit-content")),
         weft_lustre.styles([
+          weft.width(length: weft.fixed(length: weft.fit_content())),
           weft.spacing(pixels: 4),
           weft.padding_xy(x: 3, y: 3),
           weft.rounded(radius: ui_theme.radius_md(theme)),
           weft.background(color: tabs_list_bg),
-          weft.when(query: weft.max_width(length: weft.px(pixels: 767)), attrs: [
-            weft.display_none(),
-          ]),
+          weft.hide_below(breakpoint: weft.MobileBreakpoint),
         ]),
       ],
       children: [
@@ -1653,41 +1577,7 @@ fn benchmark_tabs(
               ]),
             ],
             children: [
-              weft_lustre.html(
-                html_element.namespaced(
-                  "http://www.w3.org/2000/svg",
-                  "svg",
-                  [
-                    attribute.attribute("width", "16"),
-                    attribute.attribute("height", "16"),
-                    attribute.attribute("viewBox", "0 0 24 24"),
-                    attribute.attribute("fill", "none"),
-                    attribute.attribute("stroke", "currentColor"),
-                    attribute.attribute("stroke-width", "2"),
-                    attribute.attribute("stroke-linecap", "round"),
-                    attribute.attribute("stroke-linejoin", "round"),
-                  ],
-                  [
-                    html_element.namespaced(
-                      "http://www.w3.org/2000/svg",
-                      "path",
-                      [
-                        attribute.attribute(
-                          "d",
-                          "M4 4m0 2a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2z",
-                        ),
-                      ],
-                      [],
-                    ),
-                    html_element.namespaced(
-                      "http://www.w3.org/2000/svg",
-                      "path",
-                      [attribute.attribute("d", "M12 4l0 16")],
-                      [],
-                    ),
-                  ],
-                ),
-              ),
+              weft_lustre.html(weft_icons.table([])),
               weft_lustre.text(content: "Customize Columns"),
             ],
           ),
@@ -1805,36 +1695,7 @@ fn benchmark_tabs(
               ]),
             ],
             children: [
-              weft_lustre.html(
-                html_element.namespaced(
-                  "http://www.w3.org/2000/svg",
-                  "svg",
-                  [
-                    attribute.attribute("width", "16"),
-                    attribute.attribute("height", "16"),
-                    attribute.attribute("viewBox", "0 0 24 24"),
-                    attribute.attribute("fill", "none"),
-                    attribute.attribute("stroke", "currentColor"),
-                    attribute.attribute("stroke-width", "2"),
-                    attribute.attribute("stroke-linecap", "round"),
-                    attribute.attribute("stroke-linejoin", "round"),
-                  ],
-                  [
-                    html_element.namespaced(
-                      "http://www.w3.org/2000/svg",
-                      "path",
-                      [attribute.attribute("d", "M12 5l0 14")],
-                      [],
-                    ),
-                    html_element.namespaced(
-                      "http://www.w3.org/2000/svg",
-                      "path",
-                      [attribute.attribute("d", "M5 12l14 0")],
-                      [],
-                    ),
-                  ],
-                ),
-              ),
+              weft_lustre.html(weft_icons.plus([])),
               weft_lustre.text(content: "Add Section"),
             ],
           ),
@@ -1908,12 +1769,7 @@ fn filter_row(
           weft_lustre.styles([
             weft.width(length: weft.fixed(length: weft.px(pixels: 356))),
             weft.height(length: weft.fixed(length: weft.px(pixels: 36))),
-            weft.when(
-              query: weft.max_width(length: weft.px(pixels: 767)),
-              attrs: [
-                weft.display_none(),
-              ],
-            ),
+            weft.hide_below(breakpoint: weft.MobileBreakpoint),
           ]),
           weft_lustre.html_attribute(attribute.id(benchmark_toggle_group_id)),
         ]),
@@ -2020,19 +1876,6 @@ fn dp(
       #("mobile", int.to_float(mobile)),
     ]),
   )
-}
-
-fn chart_width(state: AppState) -> Int {
-  let sidebar_w = case state.sidebar_collapsed || state.is_mobile_viewport {
-    True -> 0
-    False -> 288
-  }
-  // viewport minus sidebar, outer horizontal padding (24px x 2), card margins (23px x 2)
-  let raw = state.viewport_width - sidebar_w - 94
-  case raw < 300 {
-    True -> 300
-    False -> raw
-  }
 }
 
 fn chart_card(
@@ -2144,7 +1987,7 @@ fn chart_card(
   weft_lustre.column(
     attrs: [
       weft_lustre.html_attribute(attribute.id(benchmark_chart_card_id)),
-      weft_lustre.html_attribute(attribute.attribute("style", "margin: 0 23px;")),
+      weft_lustre.styles([weft.margin_xy(x: 23, y: 0)]),
       weft_lustre.styles([
         weft.spacing(pixels: 24),
         weft.padding_xy(x: 0, y: 24),
@@ -2159,12 +2002,17 @@ fn chart_card(
     ],
     children: [
       filter_row(theme, state),
-      weft_lustre.html(
-        html_el.div([attribute.styles([#("padding", "0 24px")])], [
+      weft_lustre.el(
+        attrs: [weft_lustre.styles([weft.padding_xy(x: 24, y: 0)])],
+        child: weft_lustre.html(
           wc.area_chart(
             data: filtered_chart_data,
-            width: chart_width(state),
+            width: wc.FillWidth,
             height: 250,
+            theme: Some(case state.switch_on {
+              True -> wc.chart_theme_dark()
+              False -> wc.chart_theme_light()
+            }),
             children: [
               wc.cartesian_grid(
                 wc_grid.cartesian_grid_config()
@@ -2231,7 +2079,7 @@ fn chart_card(
               ),
             ],
           ),
-        ]),
+        ),
       ),
       weft_lustre.el(
         attrs: [
@@ -2265,10 +2113,7 @@ fn app_shell(
         ]),
       ],
       children: [
-        icon_stroke(paths: [
-          "M5.636 5.636a9 9 0 1 0 12.728 12.728a9 9 0 0 0 -12.728 -12.728z",
-          "M16.243 7.757a6 6 0 0 0 -8.486 0",
-        ]),
+        weft_lustre.html(weft_icons.radar([])),
         weft_lustre.el(
           attrs: [
             weft_lustre.styles([
@@ -2340,7 +2185,7 @@ fn app_shell(
             weft.cursor(cursor: weft.cursor_pointer()),
           ]),
         ],
-        children: [weft_lustre.text(content: "⋮")],
+        children: [weft_lustre.html(weft_icons.more_vertical([]))],
       )
 
     weft_lustre.row(
@@ -2437,82 +2282,19 @@ fn app_shell(
         ]),
       ],
       children: [
-        icon_stroke(paths: [
-          "M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0",
-          "M12 3l0 18",
-          "M12 9l4.65 -4.65",
-          "M12 14.3l7.37 -7.37",
-          "M12 19.6l8.85 -8.85",
-        ]),
+        weft_lustre.html(weft_icons.globe([])),
         weft_lustre.text(content: "Dark Mode"),
         weft_lustre.el(
           attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
           child: weft_lustre.none(),
         ),
-        weft_lustre.row(
-          attrs: [
-            weft_lustre.html_attribute(event.on_click(ToggleColorMode)),
-            weft_lustre.styles([
-              weft.width(length: weft.fixed(length: weft.px(pixels: 36))),
-              weft.height(length: weft.fixed(length: weft.px(pixels: 20))),
-              weft.rounded(radius: weft.px(pixels: 9999)),
-              weft.background(color: case state.switch_on {
-                True -> weft.rgb(red: 24, green: 24, blue: 27)
-                False -> weft.rgb(red: 212, green: 212, blue: 216)
-              }),
-              weft.padding(pixels: 2),
-              weft.cursor(cursor: weft.cursor_pointer()),
-              weft.transition(
-                property: weft.transition_property_background_color(),
-                duration: weft.ms(milliseconds: 150),
-                easing: weft.ease_in_out(),
-              ),
-            ]),
-          ],
-          children: case state.switch_on {
-            False -> [
-              weft_lustre.el(
-                attrs: [
-                  weft_lustre.styles([
-                    weft.width(length: weft.fixed(length: weft.px(pixels: 16))),
-                    weft.height(length: weft.fixed(length: weft.px(pixels: 16))),
-                    weft.rounded(radius: weft.px(pixels: 9999)),
-                    weft.background(color: weft.rgb(
-                      red: 255,
-                      green: 255,
-                      blue: 255,
-                    )),
-                  ]),
-                ],
-                child: weft_lustre.none(),
-              ),
-              weft_lustre.el(
-                attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
-                child: weft_lustre.none(),
-              ),
-            ]
-            True -> [
-              weft_lustre.el(
-                attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
-                child: weft_lustre.none(),
-              ),
-              weft_lustre.el(
-                attrs: [
-                  weft_lustre.styles([
-                    weft.width(length: weft.fixed(length: weft.px(pixels: 16))),
-                    weft.height(length: weft.fixed(length: weft.px(pixels: 16))),
-                    weft.rounded(radius: weft.px(pixels: 9999)),
-                    weft.background(color: weft.rgb(
-                      red: 255,
-                      green: 255,
-                      blue: 255,
-                    )),
-                  ]),
-                ],
-                child: weft_lustre.none(),
-              ),
-            ]
-          },
+        switch.switch(
+          theme: theme,
+          config: switch.switch_config(
+            checked: state.switch_on,
+            on_toggle: fn(_) { ToggleColorMode },
+          ),
+          label: weft_lustre.none(),
         ),
       ],
     )
@@ -2550,9 +2332,7 @@ fn app_shell(
                 ]),
               ],
               children: [
-                icon_filled(paths: [
-                  "M4.929 4.929a10 10 0 1 1 14.141 14.141a10 10 0 0 1 -14.14 -14.14zm8.071 4.071a1 1 0 1 0 -2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0 -2h-2v-2z",
-                ]),
+                weft_lustre.html(weft_icons.plus_circle_filled([])),
                 weft_lustre.text(content: "Quick Create"),
               ],
             ),
@@ -2569,135 +2349,35 @@ fn app_shell(
                   weft.justify_content(value: weft.justify_center()),
                 ]),
               ]),
-            label: icon_stroke(paths: [
-              "M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z",
-              "M3 7l9 6l9 -6",
-            ]),
+            label: weft_lustre.html(weft_icons.mail([])),
           ),
         ],
       ),
-      nav_item(
-        icon_stroke(paths: [
-          "M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0",
-          "M13.45 11.55l2.05 -2.05",
-          "M6.4 20a9 9 0 1 1 11.2 0z",
-        ]),
-        "Dashboard",
-        True,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M13 5h8",
-          "M13 9h5",
-          "M13 15h8",
-          "M13 19h5",
-          "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
-          "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
-        ]),
-        "Lifecycle",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
-          "M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
-          "M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
-          "M4 20h14",
-        ]),
-        "Analytics",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2",
-        ]),
-        "Projects",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0",
-          "M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2",
-          "M16 3.13a4 4 0 0 1 0 7.75",
-          "M21 21v-2a4 4 0 0 0 -3 -3.85",
-        ]),
-        "Team",
-        False,
-      ),
+      nav_item(weft_lustre.html(weft_icons.radar([])), "Dashboard", True),
+      nav_item(weft_lustre.html(weft_icons.file_text([])), "Lifecycle", False),
+      nav_item(weft_lustre.html(weft_icons.bar_chart_3([])), "Analytics", False),
+      nav_item(weft_lustre.html(weft_icons.folder([])), "Projects", False),
+      nav_item(weft_lustre.html(weft_icons.users([])), "Team", False),
     ]),
     nav_group([
       nav_group_label("Documents"),
+      nav_item(weft_lustre.html(weft_icons.database([])), "Data Library", False),
+      nav_item(weft_lustre.html(weft_icons.table([])), "Reports", False),
       nav_item(
-        icon_stroke(paths: [
-          "M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0",
-          "M4 6v6a8 3 0 0 0 16 0v-6",
-          "M4 12v6a8 3 0 0 0 16 0v-6",
-        ]),
-        "Data Library",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M8 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h5.697",
-          "M18 14v4h4",
-          "M18 11v-4a2 2 0 0 0 -2 -2h-2",
-          "M8 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z",
-          "M18 18m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0",
-          "M8 11h4",
-          "M8 15h3",
-        ]),
-        "Reports",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M14 3v4a1 1 0 0 0 1 1h4",
-          "M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2",
-          "M9 12l1.333 5l1.667 -4l1.667 4l1.333 -5",
-        ]),
+        weft_lustre.html(weft_icons.file_text([])),
         "Word Assistant",
         False,
       ),
-      nav_item(
-        icon_stroke(paths: [
-          "M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
-          "M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
-          "M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
-        ]),
-        "More",
-        False,
-      ),
+      nav_item(weft_lustre.html(weft_icons.more_horizontal([])), "More", False),
     ]),
     weft_lustre.el(
       attrs: [weft_lustre.styles([weft.height(length: weft.fill())])],
       child: weft_lustre.none(),
     ),
     nav_group([
-      nav_item(
-        icon_stroke(paths: [
-          "M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z",
-          "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0",
-        ]),
-        "Settings",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0",
-          "M12 17l0 .01",
-          "M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4",
-        ]),
-        "Get Help",
-        False,
-      ),
-      nav_item(
-        icon_stroke(paths: [
-          "M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0",
-          "M21 21l-6 -6",
-        ]),
-        "Search",
-        False,
-      ),
+      nav_item(weft_lustre.html(weft_icons.settings([])), "Settings", False),
+      nav_item(weft_lustre.html(weft_icons.help_circle([])), "Get Help", False),
+      nav_item(weft_lustre.html(weft_icons.search([])), "Search", False),
       dark_mode_item,
     ]),
   ]
@@ -2774,11 +2454,7 @@ fn app_shell(
             ),
           ],
         ),
-        icon_stroke(paths: [
-          "M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
-          "M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
-          "M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
-        ]),
+        weft_lustre.html(weft_icons.more_vertical([])),
       ],
     )
 
@@ -3006,7 +2682,10 @@ fn app_shell(
                         weft.padding(pixels: 0),
                       ]),
                     ]),
-                  label: weft_lustre.text(content: "◐"),
+                  label: weft_lustre.html(case state.switch_on {
+                    True -> weft_icons.sun([])
+                    False -> weft_icons.moon([])
+                  }),
                 ),
               ],
             ),
@@ -3362,6 +3041,19 @@ pub fn main() {
             AppState(..state, reviewer_open: value),
             effect.none(),
           )
+          ReviewerSelected(row_id:, value:) -> {
+            let new_rows =
+              list.map(state.table_rows, fn(row) {
+                case row.id == row_id {
+                  True -> TableRow(..row, reviewer: value)
+                  False -> row
+                }
+              })
+            #(
+              AppState(..state, table_rows: new_rows, reviewer_open: None),
+              effect.none(),
+            )
+          }
           NavMenuOpenChanged(value) -> #(
             AppState(..state, nav_menu_open: value),
             effect.none(),
@@ -3430,50 +3122,11 @@ pub fn main() {
           True -> "dark"
           False -> "light"
         }
-        let chart_vars = case state.switch_on {
-          True ->
-            "#benchmark-app { "
-            <> "--chart-grid: #3f3f46;"
-            <> "--chart-label: #a1a1aa;"
-            <> "--chart-mobile-fill: rgba(113, 113, 122, 0.32);"
-            <> "--chart-mobile-line: #a1a1aa;"
-            <> "--chart-desktop-fill: rgba(212, 212, 216, 0.22);"
-            <> "--chart-desktop-line: #d4d4d8;"
-            <> "--chart-dot: #f4f4f5;"
-            <> "--chart-tooltip-bg: #18181b;"
-            <> "--chart-tooltip-border: #3f3f46;"
-            <> "--chart-tooltip-fg: #fafafa;"
-            <> "--chart-tooltip-muted: #d4d4d8;"
-            <> " }"
-          False ->
-            "#benchmark-app { "
-            <> "--chart-grid: #e4e4e7;"
-            <> "--chart-label: #71717a;"
-            <> "--chart-mobile-fill: rgba(161, 161, 170, 0.24);"
-            <> "--chart-mobile-line: #a1a1aa;"
-            <> "--chart-desktop-fill: rgba(113, 113, 122, 0.32);"
-            <> "--chart-desktop-line: #71717a;"
-            <> "--chart-dot: #52525b;"
-            <> "--chart-tooltip-bg: #ffffff;"
-            <> "--chart-tooltip-border: #d4d4d8;"
-            <> "--chart-tooltip-fg: #09090b;"
-            <> "--chart-tooltip-muted: #3f3f46;"
-            <> " }"
-        }
-
-        let nav_dots_css =
-          ".nav-dots { transition: opacity 0.15s ease; } "
-          <> ".nav-item:hover .nav-dots { opacity: 1 !important; }"
-
         let color_scheme_style =
           weft_lustre.html(
             html_element.element("style", [], [
               html_element.text(
-                "html { color-scheme: "
-                <> color_scheme
-                <> "; }"
-                <> chart_vars
-                <> nav_dots_css,
+                "html { color-scheme: " <> color_scheme <> "; }",
               ),
             ]),
           )

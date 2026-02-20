@@ -9,15 +9,19 @@ import weft
 import weft_lustre
 import weft_lustre/overlay
 
+import weft_lustre_ui/avatar as ui_avatar
+import weft_lustre_ui/badge as ui_badge
 import weft_lustre_ui/button as ui_button
 import weft_lustre_ui/card as ui_card
 import weft_lustre_ui/checkbox as ui_checkbox
 import weft_lustre_ui/dialog as ui_dialog
 import weft_lustre_ui/field as ui_field
 import weft_lustre_ui/forms as ui_forms
+import weft_lustre_ui/headless/badge as headless_badge
 import weft_lustre_ui/headless/button as headless_button
 import weft_lustre_ui/headless/card as headless_card
 import weft_lustre_ui/headless/checkbox as headless_checkbox
+import weft_lustre_ui/headless/combobox as headless_combobox
 import weft_lustre_ui/headless/dialog as headless_dialog
 import weft_lustre_ui/headless/field as headless_field
 import weft_lustre_ui/headless/forms as headless_forms
@@ -26,7 +30,10 @@ import weft_lustre_ui/headless/label as headless_label
 import weft_lustre_ui/headless/link as headless_link
 import weft_lustre_ui/headless/radio as headless_radio
 import weft_lustre_ui/headless/separator as headless_separator
+import weft_lustre_ui/headless/sidebar as headless_sidebar
 import weft_lustre_ui/headless/skeleton as headless_skeleton
+import weft_lustre_ui/headless/switch as headless_switch
+import weft_lustre_ui/headless/tabs as headless_tabs
 import weft_lustre_ui/headless/toast as headless_toast
 import weft_lustre_ui/headless/tooltip as headless_tooltip
 import weft_lustre_ui/input as ui_input
@@ -34,7 +41,10 @@ import weft_lustre_ui/label as ui_label
 import weft_lustre_ui/link as ui_link
 import weft_lustre_ui/radio as ui_radio
 import weft_lustre_ui/separator as ui_separator
+import weft_lustre_ui/sidebar as ui_sidebar
 import weft_lustre_ui/skeleton as ui_skeleton
+import weft_lustre_ui/switch as ui_switch
+import weft_lustre_ui/tabs as ui_tabs
 import weft_lustre_ui/theme
 import weft_lustre_ui/toast as ui_toast
 import weft_lustre_ui/tooltip as ui_tooltip
@@ -541,6 +551,61 @@ pub fn weft_lustre_ui_tests() {
         radius
         |> expect.to_equal(expected: Some(weft.px(pixels: 6)))
       }),
+      it("switch renders role=switch and aria-checked when checked=True", fn() {
+        let view =
+          headless_switch.switch(
+            config: headless_switch.switch_config(
+              checked: True,
+              on_toggle: fn(_value) { "toggled" },
+            ),
+            label: weft_lustre.text(content: "Dark mode"),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "role=\"switch\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "aria-checked=\"true\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("switch renders aria-checked=false when checked=False", fn() {
+        let view =
+          headless_switch.switch(
+            config: headless_switch.switch_config(
+              checked: False,
+              on_toggle: fn(_value) { "toggled" },
+            ),
+            label: weft_lustre.text(content: "Dark mode"),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "aria-checked=\"false\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("switch renders aria-disabled=true when disabled=True", fn() {
+        let view =
+          headless_switch.switch(
+            config: headless_switch.switch_config(
+              checked: False,
+              on_toggle: fn(_value) { "toggled" },
+            )
+              |> headless_switch.switch_disabled(),
+            label: weft_lustre.text(content: "Dark mode"),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "aria-disabled=\"true\"")
+        |> expect.to_equal(expected: True)
+      }),
     ]),
     describe("styled", [
       it("card uses theme colors and semantic title tag", fn() {
@@ -970,6 +1035,52 @@ pub fn weft_lustre_ui_tests() {
         string.contains(css, "background-color:rgba(99, 100, 101, 0.25)")
         |> expect.to_equal(expected: True)
       }),
+      it("accent returns the default accent background/foreground pair", fn() {
+        let t = theme.theme_default()
+        let #(bg, fg) = theme.accent(theme: t)
+
+        bg
+        |> expect.to_equal(expected: weft.rgba(
+          red: 0,
+          green: 0,
+          blue: 0,
+          alpha: 0.07,
+        ))
+
+        fg
+        |> expect.to_equal(expected: weft.rgb(red: 9, green: 9, blue: 9))
+      }),
+      it("muted returns the default muted background/foreground pair", fn() {
+        let t = theme.theme_default()
+        let #(bg, fg) = theme.muted(theme: t)
+
+        bg
+        |> expect.to_equal(expected: weft.rgba(
+          red: 0,
+          green: 0,
+          blue: 0,
+          alpha: 0.04,
+        ))
+
+        fg
+        |> expect.to_equal(expected: weft.rgba(
+          red: 63,
+          green: 63,
+          blue: 70,
+          alpha: 0.85,
+        ))
+      }),
+      it("hover_surface returns the default translucent hover color", fn() {
+        let t = theme.theme_default()
+
+        theme.hover_surface(theme: t)
+        |> expect.to_equal(expected: weft.rgba(
+          red: 0,
+          green: 0,
+          blue: 0,
+          alpha: 0.04,
+        ))
+      }),
       it("tooltip_effect and toast auto-dismiss are callable on Erlang", fn() {
         let key = overlay.overlay_key(value: "x")
         let cfg = ui_tooltip.tooltip_config(key: key)
@@ -983,6 +1094,384 @@ pub fn weft_lustre_ui_tests() {
           ui_toast.toast_auto_dismiss(after_ms: 10, on_dismiss: "dismiss")
 
         1 |> expect.to_equal(expected: 1)
+      }),
+      it("tab_item_el accepts an element label", fn() {
+        let label_el =
+          weft_lustre.row(attrs: [], children: [
+            weft_lustre.text(content: "Overview"),
+          ])
+
+        let item = headless_tabs.tab_item_el(value: "overview", label: label_el)
+
+        let t = theme.theme_default()
+        let config =
+          ui_tabs.tabs_config(value: "overview", on_change: fn(v) { v })
+
+        let view =
+          ui_tabs.tabs(
+            theme: t,
+            config: config,
+            items: [item],
+            content: weft_lustre.text(content: "content"),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Overview")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "role=\"tab\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("avatar fallback renders with muted theme colors", fn() {
+        let t = theme.theme_default()
+        let #(muted_bg, _muted_fg) = theme.muted(theme: t)
+
+        let view =
+          ui_avatar.avatar(
+            theme: t,
+            config: ui_avatar.avatar_config(alt: "AB")
+              |> ui_avatar.avatar_fallback(fallback: weft_lustre.text(
+                content: "AB",
+              )),
+          )
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        let _: weft.Color = muted_bg
+
+        string.contains(rendered, "AB")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "border-radius:9999px;")
+        |> expect.to_equal(expected: True)
+      }),
+      it("badge_count renders as a pill with muted colors", fn() {
+        let t = theme.theme_default()
+        let #(muted_bg, _muted_fg) = theme.muted(theme: t)
+
+        let view =
+          ui_badge.badge(
+            theme: t,
+            config: ui_badge.badge_config()
+              |> ui_badge.badge_variant(variant: ui_badge.badge_count()),
+            child: weft_lustre.text(content: "3"),
+          )
+
+        let headless_view =
+          headless_badge.badge(
+            config: headless_badge.badge_config()
+              |> headless_badge.badge_variant(
+                variant: headless_badge.badge_count(),
+              ),
+            child: weft_lustre.text(content: "3"),
+          )
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        let headless_rendered =
+          weft_lustre.layout(attrs: [], child: headless_view)
+          |> element.to_string
+
+        let _: weft.Color = muted_bg
+
+        string.contains(css, "border-radius:9999px;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "height:20px;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, ">3<")
+        |> expect.to_equal(expected: True)
+
+        string.contains(headless_rendered, ">3<")
+        |> expect.to_equal(expected: True)
+      }),
+      it(
+        "styled switch applies primary background when checked and border_color when not",
+        fn() {
+          let t =
+            theme.theme_default()
+            |> theme.theme_primary(
+              color: weft.rgb(red: 10, green: 20, blue: 30),
+              on_color: weft.rgb(red: 255, green: 255, blue: 255),
+            )
+            |> theme.theme_border(color: weft.rgb(
+              red: 200,
+              green: 201,
+              blue: 202,
+            ))
+
+          let checked_view =
+            ui_switch.switch(
+              theme: t,
+              config: ui_switch.switch_config(
+                checked: True,
+                on_toggle: fn(_value) { "toggled" },
+              ),
+              label: weft_lustre.text(content: "Dark mode"),
+            )
+
+          let unchecked_view =
+            ui_switch.switch(
+              theme: t,
+              config: ui_switch.switch_config(
+                checked: False,
+                on_toggle: fn(_value) { "toggled" },
+              ),
+              label: weft_lustre.text(content: "Dark mode"),
+            )
+
+          let checked_css =
+            weft_lustre.debug_stylesheet(attrs: [], child: checked_view)
+
+          let unchecked_css =
+            weft_lustre.debug_stylesheet(attrs: [], child: unchecked_view)
+
+          string.contains(checked_css, "background-color:rgb(10, 20, 30);")
+          |> expect.to_equal(expected: True)
+
+          string.contains(unchecked_css, "background-color:rgb(200, 201, 202);")
+          |> expect.to_equal(expected: True)
+        },
+      ),
+      it("styled switch disabled applies opacity and not-allowed cursor", fn() {
+        let t =
+          theme.theme_default()
+          |> theme.theme_disabled_opacity(opacity: 0.35)
+
+        let view =
+          ui_switch.switch(
+            theme: t,
+            config: ui_switch.switch_config(
+              checked: False,
+              on_toggle: fn(_value) { "toggled" },
+            )
+              |> ui_switch.switch_disabled(),
+            label: weft_lustre.text(content: "Dark mode"),
+          )
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        string.contains(css, "opacity:0.35;")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "cursor:not-allowed;")
+        |> expect.to_equal(expected: True)
+      }),
+      it("sidebar_group renders without error", fn() {
+        let t = theme.theme_default()
+        let view =
+          ui_sidebar.sidebar_group(
+            theme: t,
+            label: Some("Navigation"),
+            children: [weft_lustre.text(content: "item")],
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Navigation")
+        |> expect.to_equal(expected: True)
+      }),
+      it("sidebar_menu_item renders with group class for hover-reveal", fn() {
+        let item =
+          headless_sidebar.sidebar_menu_item(children: [
+            weft_lustre.text(content: "Home"),
+          ])
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: item)
+          |> element.to_string
+
+        string.contains(rendered, "weft-group-sidebar-item")
+        |> expect.to_equal(expected: True)
+      }),
+      it("sidebar_menu_button renders active state", fn() {
+        let t = theme.theme_default()
+        let view =
+          ui_sidebar.sidebar_menu_button(
+            theme: t,
+            config: ui_sidebar.sidebar_menu_button_config(
+              label: weft_lustre.text(content: "Dashboard"),
+            )
+              |> ui_sidebar.sidebar_menu_button_active,
+          )
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Dashboard")
+        |> expect.to_equal(expected: True)
+
+        string.contains(css, "background-color:")
+        |> expect.to_equal(expected: True)
+      }),
+      it("sidebar_menu_action renders hidden by default", fn() {
+        let t = theme.theme_default()
+        let view =
+          ui_sidebar.sidebar_menu_action(
+            theme: t,
+            config: ui_sidebar.sidebar_menu_action_config(on_click: fn() {
+              "clicked"
+            })
+              |> ui_sidebar.sidebar_menu_action_show_on_hover,
+            content: weft_lustre.text(content: "..."),
+          )
+
+        let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
+
+        string.contains(css, "opacity:0;")
+        |> expect.to_equal(expected: True)
+      }),
+      it("combobox renders trigger with placeholder when no value", fn() {
+        let opts = [
+          headless_combobox.combobox_option(value: "a", label: "Apple"),
+          headless_combobox.combobox_option(value: "b", label: "Banana"),
+        ]
+
+        let view =
+          headless_combobox.combobox(
+            config: headless_combobox.combobox_config(
+              options: opts,
+              value: None,
+              on_select: fn(_v) { "selected" },
+              search: "",
+              on_search: fn(_s) { "search" },
+              open: False,
+              on_toggle: fn(_b) { "toggle" },
+              placeholder: "Pick a fruit",
+              anchor_rect: None,
+              overlay_size: weft.size(width: 200, height: 300),
+              viewport: weft.size(width: 1280, height: 800),
+              option_to_string: fn(v) { v },
+            ),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Pick a fruit")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "type=\"button\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("combobox renders closed panel when open: False", fn() {
+        let opts = [
+          headless_combobox.combobox_option(value: "a", label: "Apple"),
+        ]
+
+        let view =
+          headless_combobox.combobox(
+            config: headless_combobox.combobox_config(
+              options: opts,
+              value: None,
+              on_select: fn(_v) { "selected" },
+              search: "",
+              on_search: fn(_s) { "search" },
+              open: False,
+              on_toggle: fn(_b) { "toggle" },
+              placeholder: "Choose",
+              anchor_rect: None,
+              overlay_size: weft.size(width: 200, height: 300),
+              viewport: weft.size(width: 1280, height: 800),
+              option_to_string: fn(v) { v },
+            ),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Apple")
+        |> expect.to_equal(expected: False)
+      }),
+      it("combobox option filter returns all options for empty search", fn() {
+        let opts = [
+          headless_combobox.combobox_option(value: "a", label: "Apple"),
+          headless_combobox.combobox_option(value: "b", label: "Banana"),
+        ]
+
+        let view =
+          headless_combobox.combobox(
+            config: headless_combobox.combobox_config(
+              options: opts,
+              value: None,
+              on_select: fn(_v) { "selected" },
+              search: "",
+              on_search: fn(_s) { "search" },
+              open: True,
+              on_toggle: fn(_b) { "toggle" },
+              placeholder: "Choose",
+              anchor_rect: None,
+              overlay_size: weft.size(width: 200, height: 300),
+              viewport: weft.size(width: 1280, height: 800),
+              option_to_string: fn(v) { v },
+            ),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Apple")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "Banana")
+        |> expect.to_equal(expected: True)
+      }),
+      it("combobox option filter filters by label substring", fn() {
+        let opts = [
+          headless_combobox.combobox_option(value: "a", label: "Apple"),
+          headless_combobox.combobox_option(value: "b", label: "Banana"),
+          headless_combobox.combobox_option(value: "c", label: "Cherry"),
+        ]
+
+        let view =
+          headless_combobox.combobox(
+            config: headless_combobox.combobox_config(
+              options: opts,
+              value: None,
+              on_select: fn(_v) { "selected" },
+              search: "an",
+              on_search: fn(_s) { "search" },
+              open: True,
+              on_toggle: fn(_b) { "toggle" },
+              placeholder: "Choose",
+              anchor_rect: None,
+              overlay_size: weft.size(width: 200, height: 300),
+              viewport: weft.size(width: 1280, height: 800),
+              option_to_string: fn(v) { v },
+            ),
+          )
+
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
+
+        string.contains(rendered, "Banana")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "Apple")
+        |> expect.to_equal(expected: False)
+
+        string.contains(rendered, "Cherry")
+        |> expect.to_equal(expected: False)
       }),
     ]),
   ])
