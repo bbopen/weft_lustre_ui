@@ -72,6 +72,7 @@ type AppState {
     switch_on: Bool,
     is_mobile_viewport: Bool,
     viewport_width: Int,
+    viewport_height: Int,
     popover_open: Bool,
     sheet_open: Bool,
     drawer_open: Bool,
@@ -79,7 +80,7 @@ type AppState {
     table_rows: List(TableRow),
     drag: Option(DragState),
     reviewer_open: Option(String),
-    nav_menu_open: Option(#(String, Float)),
+    nav_menu_open: Option(#(String, Int, Int)),
     visible_columns: List(String),
   )
 }
@@ -102,12 +103,12 @@ pub type Msg {
   ShowToast
   DismissToast
   ToggleColorMode
-  ViewportMeasured(Int)
+  ViewportMeasured(Int, Int)
   DragStart(index: Int, y: Float)
   DragMove(y: Float)
   DragEnd
   ReviewerOpenChanged(Option(String))
-  NavMenuOpenChanged(Option(#(String, Float)))
+  NavMenuOpenChanged(Option(#(String, Int, Int)))
   ToggleColumn(String)
 }
 
@@ -2290,7 +2291,7 @@ fn app_shell(
   ) {
     let #(_surface_bg, surface_fg) = ui_theme.surface(theme)
     let is_menu_open = case state.nav_menu_open {
-      Some(#(lbl, _)) -> lbl == label
+      Some(#(lbl, _, _)) -> lbl == label
       None -> False
     }
 
@@ -2308,8 +2309,9 @@ fn app_shell(
           weft_lustre.html_attribute(attribute.class("nav-dots")),
           weft_lustre.html_attribute(
             event.on("click", {
-              use y <- decode.field("clientY", decode.float)
-              decode.success(NavMenuOpenChanged(Some(#(label, y))))
+              use x <- decode.field("clientX", decode.int)
+              use y <- decode.field("clientY", decode.int)
+              decode.success(NavMenuOpenChanged(Some(#(label, x, y))))
             }),
           ),
           weft_lustre.styles([
@@ -3227,11 +3229,15 @@ fn app_shell(
 
 fn viewport_effect() -> effect.Effect(Msg) {
   effect.from(fn(dispatch) {
-    let read_width = fn() { window.inner_width(window.self()) }
+    let read = fn() {
+      #(window.inner_width(window.self()), window.inner_height(window.self()))
+    }
 
-    dispatch(ViewportMeasured(read_width()))
+    let #(w, h) = read()
+    dispatch(ViewportMeasured(w, h))
     window.add_event_listener("resize", fn(_event) {
-      dispatch(ViewportMeasured(read_width()))
+      let #(w2, h2) = read()
+      dispatch(ViewportMeasured(w2, h2))
     })
   })
 }
@@ -3251,6 +3257,7 @@ pub fn main() {
             switch_on: False,
             is_mobile_viewport: False,
             viewport_width: 1400,
+            viewport_height: 900,
             popover_open: False,
             sheet_open: False,
             drawer_open: False,
@@ -3385,7 +3392,7 @@ pub fn main() {
               effect.none(),
             )
           }
-          ViewportMeasured(width) -> #(
+          ViewportMeasured(width, height) -> #(
             case width <= 767 {
               True ->
                 case state.is_mobile_viewport {
@@ -3394,6 +3401,7 @@ pub fn main() {
                       ..state,
                       is_mobile_viewport: True,
                       viewport_width: width,
+                      viewport_height: height,
                     )
                   False ->
                     AppState(
@@ -3401,6 +3409,7 @@ pub fn main() {
                       density: "last_7_days",
                       is_mobile_viewport: True,
                       viewport_width: width,
+                      viewport_height: height,
                     )
                 }
               False ->
@@ -3408,6 +3417,7 @@ pub fn main() {
                   ..state,
                   is_mobile_viewport: False,
                   viewport_width: width,
+                  viewport_height: height,
                 )
             },
             effect.none(),
@@ -3470,7 +3480,7 @@ pub fn main() {
 
         let nav_context_menu = case state.nav_menu_open {
           None -> weft_lustre.none()
-          Some(#(_, menu_y)) -> {
+          Some(#(_, click_x, click_y)) -> {
             let #(overlay_bg, overlay_fg) = ui_theme.overlay_surface(theme)
 
             let menu_item = fn(item_label: String) {
@@ -3521,18 +3531,8 @@ pub fn main() {
               )
             }
 
-            weft_lustre.in_front(child: weft_lustre.el(
-              attrs: [
-                weft_lustre.styles([
-                  weft.position(value: weft.position_fixed()),
-                  weft.inset(length: weft.px(pixels: 0)),
-                ]),
-                weft_lustre.html_attribute(attribute.style("z-index", "9999")),
-                weft_lustre.html_attribute(
-                  event.on_click(NavMenuOpenChanged(None)),
-                ),
-              ],
-              child: weft_lustre.el(
+            let menu_card =
+              weft_lustre.el(
                 attrs: [
                   weft_lustre.html_attribute(
                     event.advanced("click", {
@@ -3544,11 +3544,6 @@ pub fn main() {
                     }),
                   ),
                   weft_lustre.styles([
-                    weft.position(value: weft.position_fixed()),
-                    weft.left(length: weft.px(pixels: 252)),
-                    weft.top(
-                      length: weft.px(pixels: float.round(menu_y -. 8.0)),
-                    ),
                     weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
                     weft.background(color: overlay_bg),
                     weft.border(
@@ -3568,7 +3563,6 @@ pub fn main() {
                     ]),
                     weft.padding(pixels: 4),
                   ]),
-                  weft_lustre.html_attribute(attribute.style("z-index", "10000")),
                 ],
                 child: weft_lustre.column(
                   attrs: [weft_lustre.styles([weft.spacing(pixels: 1)])],
@@ -3578,8 +3572,38 @@ pub fn main() {
                     menu_item("Delete"),
                   ],
                 ),
+              )
+
+            weft_lustre.column(attrs: [], children: [
+              weft_lustre.in_front(child: weft_lustre.el(
+                attrs: [
+                  weft_lustre.styles([
+                    weft.position(value: weft.position_fixed()),
+                    weft.inset(length: weft.px(pixels: 0)),
+                  ]),
+                  weft_lustre.html_attribute(
+                    event.on_click(NavMenuOpenChanged(None)),
+                  ),
+                ],
+                child: weft_lustre.none(),
+              )),
+              weft_lustre.anchored_overlay(
+                layer: weft_lustre.layer_in_front(),
+                anchor: weft.rect(x: click_x, y: click_y, width: 1, height: 1),
+                overlay_size: weft.size(width: 160, height: 96),
+                viewport: weft.rect(
+                  x: 0,
+                  y: 0,
+                  width: state.viewport_width,
+                  height: state.viewport_height,
+                ),
+                preferred_sides: [
+                  weft.overlay_side_right(),
+                  weft.overlay_side_below(),
+                ],
+                child: menu_card,
               ),
-            ))
+            ])
           }
         }
 

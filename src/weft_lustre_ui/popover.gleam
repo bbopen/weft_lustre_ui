@@ -53,7 +53,7 @@ fn panel_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
 
   [
     weft.position(value: weft.position_absolute()),
-    weft.top(length: weft.px(pixels: 38)),
+    weft.top(length: weft.pct(pct: 100.0)),
     weft.left(length: weft.px(pixels: 0)),
     weft.padding(pixels: 8),
     weft.background(color: overlay_bg),
