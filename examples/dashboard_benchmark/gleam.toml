@@ -10,9 +10,9 @@ lustre = ">= 5.0.0 and < 6.0.0"
 plinth = { path = "../../../weft_lustre/vendor/plinth" }
 weft = { path = "../../../weft" }
 weft_chart = { path = "../../../weft_chart" }
-weft_icons = { path = "../../../weft_icons" }
 weft_lustre = { path = "../../../weft_lustre" }
 weft_lustre_ui = { path = "../.." }
 
 [dev-dependencies]
+lucide_lustre = ">= 2.0.0 and < 3.0.0"
 startest = ">= 0.8.0"

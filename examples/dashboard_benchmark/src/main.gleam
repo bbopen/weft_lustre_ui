@@ -5,6 +5,7 @@ import gleam/int
 import gleam/list
 import gleam/option.{type Option, None, Some}
 import gleam/string
+import lucide_lustre
 import lustre
 import lustre/attribute
 import lustre/effect
@@ -19,7 +20,6 @@ import weft_chart/grid as wc_grid
 import weft_chart/series/area as wc_area
 import weft_chart/series/common as wc_common
 import weft_chart/tooltip as wc_tooltip
-import weft_icons
 import weft_lustre
 import weft_lustre/modal
 import weft_lustre_ui
@@ -649,7 +649,7 @@ fn insights_table(
     )
   }
 
-  let grip_icon = weft_lustre.html(weft_icons.grip_vertical([]))
+  let grip_icon = weft_lustre.html(lucide_lustre.grip_vertical([]))
 
   let section_type_badge = fn(section_type: String) {
     badge.badge(
@@ -668,8 +668,14 @@ fn insights_table(
 
   let status_icon = fn(status: String) {
     let icon = case status {
-      "Done" -> weft_lustre.html(weft_icons.circle_check_filled([]))
-      _ -> weft_lustre.html(weft_icons.loader([]))
+      "Done" ->
+        weft_lustre.html(
+          lucide_lustre.circle_check_big([
+            attribute.attribute("fill", "currentColor"),
+            attribute.attribute("stroke-width", "0"),
+          ]),
+        )
+      _ -> weft_lustre.html(lucide_lustre.loader([]))
     }
 
     weft_lustre.row(
@@ -756,7 +762,7 @@ fn insights_table(
                     ],
                     child: weft_lustre.text(content: label),
                   ),
-                  weft_lustre.html(weft_icons.chevron_down([])),
+                  weft_lustre.html(lucide_lustre.chevron_down([])),
                 ],
               ),
             ],
@@ -1079,7 +1085,7 @@ fn insights_table(
         ),
         table.table_cell(
           attrs: [],
-          child: weft_lustre.html(weft_icons.more_vertical([])),
+          child: weft_lustre.html(lucide_lustre.ellipsis_vertical([])),
         ),
       ],
     )
@@ -1293,7 +1299,7 @@ fn benchmark_tabs(
                         weft.justify_content(value: weft.justify_center()),
                       ]),
                     ]),
-                  label: weft_lustre.html(weft_icons.chevron_left([])),
+                  label: weft_lustre.html(lucide_lustre.chevron_left([])),
                 ),
                 button.button(
                   theme: theme,
@@ -1312,7 +1318,7 @@ fn benchmark_tabs(
                         weft.justify_content(value: weft.justify_center()),
                       ]),
                     ]),
-                  label: weft_lustre.html(weft_icons.chevron_right([])),
+                  label: weft_lustre.html(lucide_lustre.chevron_right([])),
                 ),
               ],
             ),
@@ -1577,7 +1583,7 @@ fn benchmark_tabs(
               ]),
             ],
             children: [
-              weft_lustre.html(weft_icons.table([])),
+              weft_lustre.html(lucide_lustre.table([])),
               weft_lustre.text(content: "Customize Columns"),
             ],
           ),
@@ -1695,7 +1701,7 @@ fn benchmark_tabs(
               ]),
             ],
             children: [
-              weft_lustre.html(weft_icons.plus([])),
+              weft_lustre.html(lucide_lustre.plus([])),
               weft_lustre.text(content: "Add Section"),
             ],
           ),
@@ -2113,7 +2119,7 @@ fn app_shell(
         ]),
       ],
       children: [
-        weft_lustre.html(weft_icons.radar([])),
+        weft_lustre.html(lucide_lustre.radar([])),
         weft_lustre.el(
           attrs: [
             weft_lustre.styles([
@@ -2185,7 +2191,7 @@ fn app_shell(
             weft.cursor(cursor: weft.cursor_pointer()),
           ]),
         ],
-        children: [weft_lustre.html(weft_icons.more_vertical([]))],
+        children: [weft_lustre.html(lucide_lustre.ellipsis_vertical([]))],
       )
 
     weft_lustre.row(
@@ -2282,7 +2288,7 @@ fn app_shell(
         ]),
       ],
       children: [
-        weft_lustre.html(weft_icons.globe([])),
+        weft_lustre.html(lucide_lustre.globe([])),
         weft_lustre.text(content: "Dark Mode"),
         weft_lustre.el(
           attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
@@ -2332,7 +2338,12 @@ fn app_shell(
                 ]),
               ],
               children: [
-                weft_lustre.html(weft_icons.plus_circle_filled([])),
+                weft_lustre.html(
+                  lucide_lustre.circle_plus([
+                    attribute.attribute("fill", "currentColor"),
+                    attribute.attribute("stroke-width", "0"),
+                  ]),
+                ),
                 weft_lustre.text(content: "Quick Create"),
               ],
             ),
@@ -2349,35 +2360,51 @@ fn app_shell(
                   weft.justify_content(value: weft.justify_center()),
                 ]),
               ]),
-            label: weft_lustre.html(weft_icons.mail([])),
+            label: weft_lustre.html(lucide_lustre.mail([])),
           ),
         ],
       ),
-      nav_item(weft_lustre.html(weft_icons.radar([])), "Dashboard", True),
-      nav_item(weft_lustre.html(weft_icons.file_text([])), "Lifecycle", False),
-      nav_item(weft_lustre.html(weft_icons.bar_chart_3([])), "Analytics", False),
-      nav_item(weft_lustre.html(weft_icons.folder([])), "Projects", False),
-      nav_item(weft_lustre.html(weft_icons.users([])), "Team", False),
+      nav_item(weft_lustre.html(lucide_lustre.radar([])), "Dashboard", True),
+      nav_item(
+        weft_lustre.html(lucide_lustre.file_text([])),
+        "Lifecycle",
+        False,
+      ),
+      nav_item(
+        weft_lustre.html(lucide_lustre.chart_bar([])),
+        "Analytics",
+        False,
+      ),
+      nav_item(weft_lustre.html(lucide_lustre.folder([])), "Projects", False),
+      nav_item(weft_lustre.html(lucide_lustre.users([])), "Team", False),
     ]),
     nav_group([
       nav_group_label("Documents"),
-      nav_item(weft_lustre.html(weft_icons.database([])), "Data Library", False),
-      nav_item(weft_lustre.html(weft_icons.table([])), "Reports", False),
       nav_item(
-        weft_lustre.html(weft_icons.file_text([])),
+        weft_lustre.html(lucide_lustre.database([])),
+        "Data Library",
+        False,
+      ),
+      nav_item(weft_lustre.html(lucide_lustre.table([])), "Reports", False),
+      nav_item(
+        weft_lustre.html(lucide_lustre.file_text([])),
         "Word Assistant",
         False,
       ),
-      nav_item(weft_lustre.html(weft_icons.more_horizontal([])), "More", False),
+      nav_item(weft_lustre.html(lucide_lustre.ellipsis([])), "More", False),
     ]),
     weft_lustre.el(
       attrs: [weft_lustre.styles([weft.height(length: weft.fill())])],
       child: weft_lustre.none(),
     ),
     nav_group([
-      nav_item(weft_lustre.html(weft_icons.settings([])), "Settings", False),
-      nav_item(weft_lustre.html(weft_icons.help_circle([])), "Get Help", False),
-      nav_item(weft_lustre.html(weft_icons.search([])), "Search", False),
+      nav_item(weft_lustre.html(lucide_lustre.settings([])), "Settings", False),
+      nav_item(
+        weft_lustre.html(lucide_lustre.circle_question_mark([])),
+        "Get Help",
+        False,
+      ),
+      nav_item(weft_lustre.html(lucide_lustre.search([])), "Search", False),
       dark_mode_item,
     ]),
   ]
@@ -2454,7 +2481,7 @@ fn app_shell(
             ),
           ],
         ),
-        weft_lustre.html(weft_icons.more_vertical([])),
+        weft_lustre.html(lucide_lustre.ellipsis_vertical([])),
       ],
     )
 
@@ -2683,8 +2710,8 @@ fn app_shell(
                       ]),
                     ]),
                   label: weft_lustre.html(case state.switch_on {
-                    True -> weft_icons.sun([])
-                    False -> weft_icons.moon([])
+                    True -> lucide_lustre.sun([])
+                    False -> lucide_lustre.moon([])
                   }),
                 ),
               ],
