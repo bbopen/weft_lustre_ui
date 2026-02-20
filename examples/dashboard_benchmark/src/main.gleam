@@ -24,7 +24,6 @@ import weft_chart/tooltip as wc_tooltip
 import weft_lustre
 import weft_lustre/modal
 import weft_lustre_ui
-import weft_lustre_ui/avatar
 import weft_lustre_ui/badge
 import weft_lustre_ui/button
 import weft_lustre_ui/calendar
@@ -79,6 +78,9 @@ type AppState {
     toast_open: Bool,
     table_rows: List(TableRow),
     drag: Option(DragState),
+    reviewer_open: Option(String),
+    nav_menu_open: Option(#(String, Float)),
+    visible_columns: List(String),
   )
 }
 
@@ -104,6 +106,9 @@ pub type Msg {
   DragStart(index: Int, y: Float)
   DragMove(y: Float)
   DragEnd
+  ReviewerOpenChanged(Option(String))
+  NavMenuOpenChanged(Option(#(String, Float)))
+  ToggleColumn(String)
 }
 
 const sheet_root_id = "benchmark-sheet"
@@ -413,6 +418,53 @@ fn text_small_strong(content: String) -> weft_lustre.Element(msg) {
   )
 }
 
+fn icon_stroke(paths paths: List(String)) -> weft_lustre.Element(msg) {
+  weft_lustre.html(html_element.namespaced(
+    "http://www.w3.org/2000/svg",
+    "svg",
+    [
+      attribute.attribute("width", "18"),
+      attribute.attribute("height", "18"),
+      attribute.attribute("viewBox", "0 0 24 24"),
+      attribute.attribute("fill", "none"),
+      attribute.attribute("stroke", "currentColor"),
+      attribute.attribute("stroke-width", "2"),
+      attribute.attribute("stroke-linecap", "round"),
+      attribute.attribute("stroke-linejoin", "round"),
+    ],
+    list.map(paths, fn(d) {
+      html_element.namespaced(
+        "http://www.w3.org/2000/svg",
+        "path",
+        [attribute.attribute("d", d)],
+        [],
+      )
+    }),
+  ))
+}
+
+fn icon_filled(paths paths: List(String)) -> weft_lustre.Element(msg) {
+  weft_lustre.html(html_element.namespaced(
+    "http://www.w3.org/2000/svg",
+    "svg",
+    [
+      attribute.attribute("width", "18"),
+      attribute.attribute("height", "18"),
+      attribute.attribute("viewBox", "0 0 24 24"),
+      attribute.attribute("fill", "currentColor"),
+      attribute.attribute("stroke", "none"),
+    ],
+    list.map(paths, fn(d) {
+      html_element.namespaced(
+        "http://www.w3.org/2000/svg",
+        "path",
+        [attribute.attribute("d", d)],
+        [],
+      )
+    }),
+  ))
+}
+
 fn metrics_row(theme: weft_lustre_ui.Theme) -> weft_lustre.Element(Msg) {
   let #(input_surface_bg, _) = ui_theme.input_surface(theme)
 
@@ -563,12 +615,19 @@ fn insights_table(
 ) -> weft_lustre.Element(Msg) {
   let #(input_surface_bg, _) = ui_theme.input_surface(theme)
 
-  let reviewer_options = [
-    select.select_option(value: "assign", label: "Assign reviewer"),
-    select.select_option(value: "eddie_lake", label: "Eddie Lake"),
-    select.select_option(value: "jamik_tashpulatov", label: "Jamik Tashpulatov"),
-    select.select_option(value: "avery_lucas", label: "Avery Lucas"),
+  let reviewer_options: List(#(String, String)) = [
+    #("assign", "Assign reviewer"),
+    #("eddie_lake", "Eddie Lake"),
+    #("jamik_tashpulatov", "Jamik Tashpulatov"),
+    #("avery_lucas", "Avery Lucas"),
   ]
+
+  let reviewer_label = fn(value: String) {
+    case list.find(reviewer_options, fn(opt) { opt.0 == value }) {
+      Ok(#(_, lbl)) -> lbl
+      Error(_) -> value
+    }
+  }
 
   let checkbox_cell = fn(checked: Bool) {
     weft_lustre.element_tag(
@@ -771,22 +830,118 @@ fn insights_table(
 
   let reviewer_cell = fn(reviewer: String, row_id: String, use_select: Bool) {
     case use_select {
-      True ->
-        select.select(
+      False -> weft_lustre.text(content: reviewer)
+      True -> {
+        let label = reviewer_label(reviewer)
+        let is_open = state.reviewer_open == Some(row_id)
+        let #(_, surface_fg) = ui_theme.surface(theme)
+
+        popover.popover(
           theme: theme,
-          config: select.select_config(
-            value: reviewer,
-            on_change: fn(_value) { TableNoop },
-            options: reviewer_options,
-          )
-            |> select.select_attrs(attrs: [
+          config: popover.popover_config(open: is_open, on_toggle: fn(open) {
+            ReviewerOpenChanged(case open {
+              True -> Some(row_id)
+              False -> None
+            })
+          })
+            |> popover.popover_attrs(attrs: [
+              weft_lustre.styles([
+                weft.align_items(value: weft.align_items_center()),
+              ]),
+            ])
+            |> popover.popover_trigger_attrs(attrs: [
               weft_lustre.html_attribute(attribute.id(row_id <> "-reviewer")),
               weft_lustre.styles([
                 weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
+                weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+                weft.justify_content(value: weft.justify_space_between()),
+                weft.padding_xy(x: 8, y: 0),
+                weft.font_size(size: weft.rem(rem: 0.875)),
+                weft.text_color(color: ui_theme.muted_text(theme)),
+              ]),
+            ])
+            |> popover.popover_panel_attrs(attrs: [
+              weft_lustre.styles([
+                weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
+                weft.padding_xy(x: 4, y: 4),
+                weft.spacing(pixels: 2),
               ]),
             ]),
+          trigger: weft_lustre.row(
+            attrs: [
+              weft_lustre.styles([
+                weft.spacing(pixels: 4),
+                weft.align_items(value: weft.align_items_center()),
+                weft.width(length: weft.fill()),
+              ]),
+            ],
+            children: [
+              weft_lustre.el(
+                attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
+                child: weft_lustre.text(content: label),
+              ),
+              icon_stroke(paths: ["M6 9l6 6l6 -6"]),
+            ],
+          ),
+          panel: weft_lustre.column(
+            attrs: [weft_lustre.styles([weft.spacing(pixels: 2)])],
+            children: list.map(reviewer_options, fn(opt) {
+              let #(opt_value, opt_label) = opt
+              let is_selected = opt_value == reviewer
+              weft_lustre.element_tag(
+                tag: "button",
+                base_weft_attrs: [weft.el_layout()],
+                attrs: [
+                  weft_lustre.html_attribute(attribute.type_("button")),
+                  weft_lustre.html_attribute(
+                    event.on_click(ReviewerOpenChanged(None)),
+                  ),
+                  weft_lustre.styles([
+                    weft.display(value: weft.display_flex()),
+                    weft.align_items(value: weft.align_items_center()),
+                    weft.width(length: weft.fill()),
+                    weft.padding_xy(x: 8, y: 4),
+                    weft.rounded(radius: ui_theme.radius_md(theme)),
+                    weft.font_size(size: weft.rem(rem: 0.875)),
+                    weft.cursor(cursor: weft.cursor_pointer()),
+                    weft.background(color: case is_selected {
+                      True -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.06)
+                      False -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)
+                    }),
+                    weft.border(
+                      width: weft.px(pixels: 0),
+                      style: weft.border_style_solid(),
+                      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+                    ),
+                    weft.mouse_over(attrs: [
+                      weft.background(color: case state.switch_on {
+                        True ->
+                          weft.rgba(
+                            red: 255,
+                            green: 255,
+                            blue: 255,
+                            alpha: 0.06,
+                          )
+                        False ->
+                          weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04)
+                      }),
+                    ]),
+                    weft.text_color(color: surface_fg),
+                  ]),
+                ],
+                children: [weft_lustre.text(content: opt_label)],
+              )
+            }),
+          ),
         )
-      False -> weft_lustre.text(content: reviewer)
+      }
+    }
+  }
+
+  let col_visible_attrs = fn(col_key: String) {
+    case list.contains(state.visible_columns, col_key) {
+      True -> []
+      False -> [weft_lustre.styles([weft.display_none()])]
     }
   }
 
@@ -805,32 +960,32 @@ fn insights_table(
         table.table_head(theme: theme, attrs: [], child: checkbox_cell(False)),
         table.table_head(
           theme: theme,
-          attrs: [],
+          attrs: col_visible_attrs("header"),
           child: weft_lustre.text(content: "Header"),
         ),
         table.table_head(
           theme: theme,
-          attrs: [],
+          attrs: col_visible_attrs("section_type"),
           child: weft_lustre.text(content: "Section Type"),
         ),
         table.table_head(
           theme: theme,
-          attrs: [],
+          attrs: col_visible_attrs("status"),
           child: weft_lustre.text(content: "Status"),
         ),
         table.table_head(
           theme: theme,
-          attrs: [],
+          attrs: col_visible_attrs("target"),
           child: weft_lustre.text(content: "Target"),
         ),
         table.table_head(
           theme: theme,
-          attrs: [],
+          attrs: col_visible_attrs("limit"),
           child: weft_lustre.text(content: "Limit"),
         ),
         table.table_head(
           theme: theme,
-          attrs: [],
+          attrs: col_visible_attrs("reviewer"),
           child: weft_lustre.text(content: "Reviewer"),
         ),
         table.table_head(
@@ -909,7 +1064,7 @@ fn insights_table(
           attrs: [
             weft_lustre.styles([
               weft.width(length: weft.fixed(length: weft.px(pixels: 44))),
-              weft.text_color(color: weft.rgb(red: 200, green: 200, blue: 200)),
+              weft.text_color(color: ui_theme.muted_text(theme)),
               weft.cursor(cursor: weft.cursor_grab()),
               weft.user_select(value: weft.user_select_none()),
             ]),
@@ -927,22 +1082,78 @@ fn insights_table(
           child: grip_icon,
         ),
         table.table_cell(attrs: [], child: checkbox_cell(False)),
-        table.table_cell(attrs: [], child: weft_lustre.text(content: r.header)),
-        table.table_cell(attrs: [], child: section_type_badge(r.section_type)),
-        table.table_cell(attrs: [], child: status_icon(r.status)),
         table.table_cell(
-          attrs: [],
+          attrs: col_visible_attrs("header"),
+          child: weft_lustre.text(content: r.header),
+        ),
+        table.table_cell(
+          attrs: col_visible_attrs("section_type"),
+          child: section_type_badge(r.section_type),
+        ),
+        table.table_cell(
+          attrs: col_visible_attrs("status"),
+          child: status_icon(r.status),
+        ),
+        table.table_cell(
+          attrs: col_visible_attrs("target"),
           child: metric_input(r.target, r.id <> "-target"),
         ),
         table.table_cell(
-          attrs: [],
+          attrs: col_visible_attrs("limit"),
           child: metric_input(r.limit, r.id <> "-limit"),
         ),
         table.table_cell(
-          attrs: [],
+          attrs: col_visible_attrs("reviewer"),
           child: reviewer_cell(r.reviewer, r.id, r.reviewer_is_select),
         ),
-        table.table_cell(attrs: [], child: weft_lustre.text(content: "⋮")),
+        table.table_cell(
+          attrs: [],
+          child: weft_lustre.html(
+            html_element.namespaced(
+              "http://www.w3.org/2000/svg",
+              "svg",
+              [
+                attribute.attribute("width", "16"),
+                attribute.attribute("height", "16"),
+                attribute.attribute("viewBox", "0 0 24 24"),
+                attribute.attribute("fill", "currentColor"),
+                attribute.attribute("stroke", "none"),
+              ],
+              [
+                html_element.namespaced(
+                  "http://www.w3.org/2000/svg",
+                  "circle",
+                  [
+                    attribute.attribute("cx", "12"),
+                    attribute.attribute("cy", "5"),
+                    attribute.attribute("r", "1"),
+                  ],
+                  [],
+                ),
+                html_element.namespaced(
+                  "http://www.w3.org/2000/svg",
+                  "circle",
+                  [
+                    attribute.attribute("cx", "12"),
+                    attribute.attribute("cy", "12"),
+                    attribute.attribute("r", "1"),
+                  ],
+                  [],
+                ),
+                html_element.namespaced(
+                  "http://www.w3.org/2000/svg",
+                  "circle",
+                  [
+                    attribute.attribute("cx", "12"),
+                    attribute.attribute("cy", "19"),
+                    attribute.attribute("r", "1"),
+                  ],
+                  [],
+                ),
+              ],
+            ),
+          ),
+        ),
       ],
     )
   }
@@ -1116,13 +1327,73 @@ fn benchmark_tabs(
         weft_lustre.row(
           attrs: [
             weft_lustre.styles([
-              weft.height(length: weft.fixed(length: weft.px(pixels: 40))),
+              weft.height(length: weft.fixed(length: weft.px(pixels: 44))),
               weft.padding_xy(x: 24, y: 0),
               weft.align_items(value: weft.align_items_center()),
-              weft.justify_content(value: weft.justify_end()),
+              weft.justify_content(value: weft.justify_space_between()),
             ]),
           ],
-          children: [text_muted(theme, "Page 1 of 1")],
+          children: [
+            text_muted(
+              theme,
+              "0 of "
+                <> int.to_string(list.length(state.table_rows))
+                <> " row(s) selected.",
+            ),
+            weft_lustre.row(
+              attrs: [
+                weft_lustre.styles([
+                  weft.spacing(pixels: 6),
+                  weft.align_items(value: weft.align_items_center()),
+                ]),
+              ],
+              children: [
+                text_muted(theme, "Page 1 of 1"),
+                button.button(
+                  theme: theme,
+                  config: button.button_config(on_press: TableNoop)
+                    |> button.button_variant(variant: button.secondary())
+                    |> button.button_disabled()
+                    |> button.button_attrs(attrs: [
+                      weft_lustre.styles([
+                        weft.width(
+                          length: weft.fixed(length: weft.px(pixels: 28)),
+                        ),
+                        weft.height(
+                          length: weft.fixed(length: weft.px(pixels: 28)),
+                        ),
+                        weft.padding(pixels: 0),
+                        weft.justify_content(value: weft.justify_center()),
+                      ]),
+                    ]),
+                  label: icon_stroke(paths: [
+                    "M15 6l-6 6l6 6",
+                  ]),
+                ),
+                button.button(
+                  theme: theme,
+                  config: button.button_config(on_press: TableNoop)
+                    |> button.button_variant(variant: button.secondary())
+                    |> button.button_disabled()
+                    |> button.button_attrs(attrs: [
+                      weft_lustre.styles([
+                        weft.width(
+                          length: weft.fixed(length: weft.px(pixels: 28)),
+                        ),
+                        weft.height(
+                          length: weft.fixed(length: weft.px(pixels: 28)),
+                        ),
+                        weft.padding(pixels: 0),
+                        weft.justify_content(value: weft.justify_center()),
+                      ]),
+                    ]),
+                  label: icon_stroke(paths: [
+                    "M9 6l6 6l-6 6",
+                  ]),
+                ),
+              ],
+            ),
+          ],
         ),
       ],
     )
@@ -1419,10 +1690,98 @@ fn benchmark_tabs(
               weft_lustre.text(content: "Customize Columns"),
             ],
           ),
-          panel: text_muted(
-            theme,
-            "Use tabs and filters to narrow dashboard insights.",
-          ),
+          panel: {
+            let #(_, surface_fg) = ui_theme.surface(theme)
+
+            let col_toggle = fn(col_key: String, col_label: String) {
+              let is_visible = list.contains(state.visible_columns, col_key)
+
+              weft_lustre.element_tag(
+                tag: "button",
+                base_weft_attrs: [weft.el_layout()],
+                attrs: [
+                  weft_lustre.html_attribute(attribute.type_("button")),
+                  weft_lustre.html_attribute(
+                    event.on_click(ToggleColumn(col_key)),
+                  ),
+                  weft_lustre.styles([
+                    weft.display(value: weft.display_flex()),
+                    weft.align_items(value: weft.align_items_center()),
+                    weft.spacing(pixels: 8),
+                    weft.width(length: weft.fill()),
+                    weft.padding_xy(x: 6, y: 5),
+                    weft.rounded(radius: ui_theme.radius_md(theme)),
+                    weft.font_size(size: weft.rem(rem: 0.8125)),
+                    weft.cursor(cursor: weft.cursor_pointer()),
+                    weft.background(color: weft.rgba(
+                      red: 0,
+                      green: 0,
+                      blue: 0,
+                      alpha: 0.0,
+                    )),
+                    weft.border(
+                      width: weft.px(pixels: 0),
+                      style: weft.border_style_solid(),
+                      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+                    ),
+                    weft.mouse_over(attrs: [
+                      weft.background(color: case state.switch_on {
+                        True ->
+                          weft.rgba(
+                            red: 255,
+                            green: 255,
+                            blue: 255,
+                            alpha: 0.06,
+                          )
+                        False ->
+                          weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04)
+                      }),
+                    ]),
+                    weft.text_color(color: surface_fg),
+                  ]),
+                ],
+                children: [
+                  weft_lustre.el(
+                    attrs: [
+                      weft_lustre.styles([
+                        weft.width(
+                          length: weft.fixed(length: weft.px(pixels: 14)),
+                        ),
+                        weft.height(
+                          length: weft.fixed(length: weft.px(pixels: 14)),
+                        ),
+                        weft.border(
+                          width: weft.px(pixels: 1),
+                          style: weft.border_style_solid(),
+                          color: ui_theme.border_color(theme),
+                        ),
+                        weft.rounded(radius: weft.px(pixels: 3)),
+                        weft.background(color: case is_visible {
+                          True -> ui_theme.border_color(theme)
+                          False ->
+                            weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)
+                        }),
+                      ]),
+                    ],
+                    child: weft_lustre.none(),
+                  ),
+                  weft_lustre.text(content: col_label),
+                ],
+              )
+            }
+
+            weft_lustre.column(
+              attrs: [weft_lustre.styles([weft.spacing(pixels: 2)])],
+              children: [
+                col_toggle("header", "Header"),
+                col_toggle("section_type", "Section Type"),
+                col_toggle("status", "Status"),
+                col_toggle("target", "Target"),
+                col_toggle("limit", "Limit"),
+                col_toggle("reviewer", "Reviewer"),
+              ],
+            )
+          },
         ),
         button.button(
           theme: theme,
@@ -1665,7 +2024,7 @@ fn dp(
 fn chart_width(state: AppState) -> Int {
   let sidebar_w = case state.sidebar_collapsed || state.is_mobile_viewport {
     True -> 0
-    False -> 256
+    False -> 288
   }
   // viewport minus sidebar, outer horizontal padding (24px x 2), card margins (23px x 2)
   let raw = state.viewport_width - sidebar_w - 94
@@ -1893,37 +2252,106 @@ fn app_shell(
 ) -> weft_lustre.Element(Msg) {
   let #(surface_bg, _) = ui_theme.surface(theme)
 
-  let brand_avatar =
-    avatar.avatar(
-      theme: theme,
-      config: avatar.avatar_config(alt: "Acme")
-        |> avatar.avatar_fallback(fallback: weft_lustre.text(content: "A")),
-    )
-
   let sidebar_header =
     weft_lustre.row(
       attrs: [
         weft_lustre.styles([
-          weft.spacing(pixels: 10),
+          weft.height(length: weft.fixed(length: weft.px(pixels: 36))),
+          weft.spacing(pixels: 8),
           weft.align_items(value: weft.align_items_center()),
+          weft.padding_xy(x: 4, y: 0),
+          weft.rounded(radius: ui_theme.radius_md(theme)),
         ]),
       ],
       children: [
-        brand_avatar,
-        text_title("Acme Inc."),
+        icon_stroke(paths: [
+          "M5.636 5.636a9 9 0 1 0 12.728 12.728a9 9 0 0 0 -12.728 -12.728z",
+          "M16.243 7.757a6 6 0 0 0 -8.486 0",
+        ]),
+        weft_lustre.el(
+          attrs: [
+            weft_lustre.styles([
+              weft.font_size(size: weft.rem(rem: 1.0)),
+              weft.font_weight(weight: weft.font_weight_value(weight: 600)),
+              weft.line_height(height: weft.line_height_multiple(
+                multiplier: 1.2,
+              )),
+            ]),
+          ],
+          child: weft_lustre.text(content: "Acme Inc."),
+        ),
       ],
     )
 
-  let nav_item = fn(label: String, active: Bool) {
+  let nav_item = fn(
+    icon_el: weft_lustre.Element(Msg),
+    label: String,
+    active: Bool,
+  ) {
     let #(_surface_bg, surface_fg) = ui_theme.surface(theme)
+    let is_menu_open = case state.nav_menu_open {
+      Some(#(lbl, _)) -> lbl == label
+      None -> False
+    }
 
-    weft_lustre.el(
+    let hover_bg = case state.switch_on {
+      True -> weft.rgba(red: 250, green: 250, blue: 250, alpha: 0.08)
+      False -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.04)
+    }
+
+    let dots_btn =
+      weft_lustre.element_tag(
+        tag: "button",
+        base_weft_attrs: [weft.el_layout()],
+        attrs: [
+          weft_lustre.html_attribute(attribute.type_("button")),
+          weft_lustre.html_attribute(attribute.class("nav-dots")),
+          weft_lustre.html_attribute(
+            event.on("click", {
+              use y <- decode.field("clientY", decode.float)
+              decode.success(NavMenuOpenChanged(Some(#(label, y))))
+            }),
+          ),
+          weft_lustre.styles([
+            weft.width(length: weft.fixed(length: weft.px(pixels: 24))),
+            weft.height(length: weft.fixed(length: weft.px(pixels: 24))),
+            weft.padding(pixels: 0),
+            weft.display(value: weft.display_flex()),
+            weft.align_items(value: weft.align_items_center()),
+            weft.justify_content(value: weft.justify_center()),
+            weft.alpha(opacity: case is_menu_open {
+              True -> 1.0
+              False -> 0.0
+            }),
+            weft.border(
+              width: weft.px(pixels: 0),
+              style: weft.border_style_solid(),
+              color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+            ),
+            weft.background(color: weft.rgba(
+              red: 0,
+              green: 0,
+              blue: 0,
+              alpha: 0.0,
+            )),
+            weft.rounded(radius: ui_theme.radius_md(theme)),
+            weft.cursor(cursor: weft.cursor_pointer()),
+          ]),
+        ],
+        children: [weft_lustre.text(content: "⋮")],
+      )
+
+    weft_lustre.row(
       attrs: [
+        weft_lustre.html_attribute(attribute.class("nav-item")),
         weft_lustre.styles([
-          weft.padding_xy(x: 8, y: 4),
+          weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+          weft.padding_xy(x: 8, y: 0),
           weft.rounded(radius: ui_theme.radius_md(theme)),
           weft.font_size(size: weft.rem(rem: 0.875)),
-          weft.font_weight(weight: weft.font_weight_value(weight: 560)),
+          weft.font_weight(weight: weft.font_weight_value(weight: 500)),
+          weft.spacing(pixels: 8),
+          weft.align_items(value: weft.align_items_center()),
           case active {
             True -> weft.text_color(color: surface_fg)
             False -> weft.text_color(color: ui_theme.muted_text(theme))
@@ -1954,72 +2382,403 @@ fn app_shell(
                 alpha: 0.0,
               ))
           },
+          weft.mouse_over(attrs: [weft.background(color: hover_bg)]),
+          weft.cursor(cursor: weft.cursor_pointer()),
+        ]),
+      ],
+      children: [
+        icon_el,
+        weft_lustre.text(content: label),
+        weft_lustre.el(
+          attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
+          child: weft_lustre.none(),
+        ),
+        dots_btn,
+      ],
+    )
+  }
+
+  let nav_group_label = fn(label: String) {
+    weft_lustre.el(
+      attrs: [
+        weft_lustre.styles([
+          weft.padding_xy(x: 8, y: 6),
+          weft.font_size(size: weft.rem(rem: 0.75)),
+          weft.font_weight(weight: weft.font_weight_value(weight: 500)),
+          weft.text_color(color: ui_theme.muted_text(theme)),
+          weft.line_height(height: weft.line_height_multiple(multiplier: 1.35)),
         ]),
       ],
       child: weft_lustre.text(content: label),
     )
   }
 
-  let sidebar_body = [
-    button.button(
-      theme: theme,
-      config: button.button_config(on_press: OpenSheet)
-        |> button.button_variant(variant: button.primary())
-        |> button.button_attrs(attrs: [
-          weft_lustre.styles([
-            weft.width(length: weft.fixed(length: weft.px(pixels: 216))),
-            weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
-            weft.padding_xy(x: 8, y: 8),
-          ]),
-          weft_lustre.html_attribute(attribute.id(benchmark_primary_action_id)),
-        ]),
-      label: weft_lustre.text(content: "Quick Create"),
-    ),
-    nav_item("Inbox", False),
-    nav_item("Dashboard", True),
-    nav_item("Lifecycle", False),
-    nav_item("Analytics", False),
-    nav_item("Projects", False),
-    nav_item("Team", False),
-    text_muted(theme, "Documents"),
-    nav_item("Data Library", False),
-    nav_item("Reports", False),
-    nav_item("Word Assistant", False),
-    nav_item("More", False),
-    nav_item("Settings", False),
-    nav_item("Get Help", False),
-    nav_item("Search", False),
+  let nav_group = fn(children: List(weft_lustre.Element(Msg))) {
+    weft_lustre.column(
+      attrs: [weft_lustre.styles([weft.spacing(pixels: 2)])],
+      children: children,
+    )
+  }
+
+  let dark_mode_item =
     weft_lustre.row(
       attrs: [
         weft_lustre.styles([
+          weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+          weft.padding_xy(x: 8, y: 0),
+          weft.rounded(radius: ui_theme.radius_md(theme)),
+          weft.font_size(size: weft.rem(rem: 0.875)),
+          weft.font_weight(weight: weft.font_weight_value(weight: 500)),
           weft.spacing(pixels: 8),
           weft.align_items(value: weft.align_items_center()),
+          weft.text_color(color: ui_theme.muted_text(theme)),
         ]),
       ],
       children: [
-        text_muted(theme, "Dark Mode"),
-        button.button(
-          theme: theme,
-          config: button.button_config(on_press: ToggleColorMode)
-            |> button.button_variant(variant: button.secondary())
-            |> button.button_size(size: button.sm())
-            |> button.button_attrs(attrs: [
-              weft_lustre.styles([
-                weft.width(length: weft.fixed(length: weft.px(pixels: 32))),
-                weft.height(length: weft.fixed(length: weft.px(pixels: 18))),
-                weft.padding(pixels: 0),
-              ]),
+        icon_stroke(paths: [
+          "M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0",
+          "M12 3l0 18",
+          "M12 9l4.65 -4.65",
+          "M12 14.3l7.37 -7.37",
+          "M12 19.6l8.85 -8.85",
+        ]),
+        weft_lustre.text(content: "Dark Mode"),
+        weft_lustre.el(
+          attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
+          child: weft_lustre.none(),
+        ),
+        weft_lustre.row(
+          attrs: [
+            weft_lustre.html_attribute(event.on_click(ToggleColorMode)),
+            weft_lustre.styles([
+              weft.width(length: weft.fixed(length: weft.px(pixels: 36))),
+              weft.height(length: weft.fixed(length: weft.px(pixels: 20))),
+              weft.rounded(radius: weft.px(pixels: 9999)),
+              weft.background(color: case state.switch_on {
+                True -> weft.rgb(red: 24, green: 24, blue: 27)
+                False -> weft.rgb(red: 212, green: 212, blue: 216)
+              }),
+              weft.padding(pixels: 2),
+              weft.cursor(cursor: weft.cursor_pointer()),
+              weft.transition(
+                property: weft.transition_property_background_color(),
+                duration: weft.ms(milliseconds: 150),
+                easing: weft.ease_in_out(),
+              ),
             ]),
-          label: weft_lustre.text(content: case state.switch_on {
-            True -> "●"
-            False -> "○"
-          }),
+          ],
+          children: case state.switch_on {
+            False -> [
+              weft_lustre.el(
+                attrs: [
+                  weft_lustre.styles([
+                    weft.width(length: weft.fixed(length: weft.px(pixels: 16))),
+                    weft.height(length: weft.fixed(length: weft.px(pixels: 16))),
+                    weft.rounded(radius: weft.px(pixels: 9999)),
+                    weft.background(color: weft.rgb(
+                      red: 255,
+                      green: 255,
+                      blue: 255,
+                    )),
+                  ]),
+                ],
+                child: weft_lustre.none(),
+              ),
+              weft_lustre.el(
+                attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
+                child: weft_lustre.none(),
+              ),
+            ]
+            True -> [
+              weft_lustre.el(
+                attrs: [weft_lustre.styles([weft.width(length: weft.fill())])],
+                child: weft_lustre.none(),
+              ),
+              weft_lustre.el(
+                attrs: [
+                  weft_lustre.styles([
+                    weft.width(length: weft.fixed(length: weft.px(pixels: 16))),
+                    weft.height(length: weft.fixed(length: weft.px(pixels: 16))),
+                    weft.rounded(radius: weft.px(pixels: 9999)),
+                    weft.background(color: weft.rgb(
+                      red: 255,
+                      green: 255,
+                      blue: 255,
+                    )),
+                  ]),
+                ],
+                child: weft_lustre.none(),
+              ),
+            ]
+          },
         ),
       ],
+    )
+
+  let sidebar_body = [
+    nav_group([
+      weft_lustre.row(
+        attrs: [
+          weft_lustre.styles([
+            weft.spacing(pixels: 6),
+            weft.align_items(value: weft.align_items_center()),
+          ]),
+        ],
+        children: [
+          button.button(
+            theme: theme,
+            config: button.button_config(on_press: OpenSheet)
+              |> button.button_variant(variant: button.primary())
+              |> button.button_attrs(attrs: [
+                weft_lustre.styles([
+                  weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+                  weft.width(length: weft.fill()),
+                  weft.padding_xy(x: 8, y: 0),
+                  weft.font_size(size: weft.rem(rem: 0.875)),
+                ]),
+                weft_lustre.html_attribute(attribute.id(
+                  benchmark_primary_action_id,
+                )),
+              ]),
+            label: weft_lustre.row(
+              attrs: [
+                weft_lustre.styles([
+                  weft.spacing(pixels: 6),
+                  weft.align_items(value: weft.align_items_center()),
+                ]),
+              ],
+              children: [
+                icon_filled(paths: [
+                  "M4.929 4.929a10 10 0 1 1 14.141 14.141a10 10 0 0 1 -14.14 -14.14zm8.071 4.071a1 1 0 1 0 -2 0v2h-2a1 1 0 1 0 0 2h2v2a1 1 0 1 0 2 0v-2h2a1 1 0 1 0 0 -2h-2v-2z",
+                ]),
+                weft_lustre.text(content: "Quick Create"),
+              ],
+            ),
+          ),
+          button.button(
+            theme: theme,
+            config: button.button_config(on_press: TableNoop)
+              |> button.button_variant(variant: button.secondary())
+              |> button.button_attrs(attrs: [
+                weft_lustre.styles([
+                  weft.width(length: weft.fixed(length: weft.px(pixels: 32))),
+                  weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+                  weft.padding(pixels: 0),
+                  weft.justify_content(value: weft.justify_center()),
+                ]),
+              ]),
+            label: icon_stroke(paths: [
+              "M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10z",
+              "M3 7l9 6l9 -6",
+            ]),
+          ),
+        ],
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M12 13m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0",
+          "M13.45 11.55l2.05 -2.05",
+          "M6.4 20a9 9 0 1 1 11.2 0z",
+        ]),
+        "Dashboard",
+        True,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M13 5h8",
+          "M13 9h5",
+          "M13 15h8",
+          "M13 19h5",
+          "M3 4m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
+          "M3 14m0 1a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v4a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
+        ]),
+        "Lifecycle",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
+          "M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
+          "M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1z",
+          "M4 20h14",
+        ]),
+        "Analytics",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M5 4h4l3 3h7a2 2 0 0 1 2 2v8a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-11a2 2 0 0 1 2 -2",
+        ]),
+        "Projects",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M9 7m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0",
+          "M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2",
+          "M16 3.13a4 4 0 0 1 0 7.75",
+          "M21 21v-2a4 4 0 0 0 -3 -3.85",
+        ]),
+        "Team",
+        False,
+      ),
+    ]),
+    nav_group([
+      nav_group_label("Documents"),
+      nav_item(
+        icon_stroke(paths: [
+          "M12 6m-8 0a8 3 0 1 0 16 0a8 3 0 1 0 -16 0",
+          "M4 6v6a8 3 0 0 0 16 0v-6",
+          "M4 12v6a8 3 0 0 0 16 0v-6",
+        ]),
+        "Data Library",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M8 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h5.697",
+          "M18 14v4h4",
+          "M18 11v-4a2 2 0 0 0 -2 -2h-2",
+          "M8 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z",
+          "M18 18m-4 0a4 4 0 1 0 8 0a4 4 0 1 0 -8 0",
+          "M8 11h4",
+          "M8 15h3",
+        ]),
+        "Reports",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M14 3v4a1 1 0 0 0 1 1h4",
+          "M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2",
+          "M9 12l1.333 5l1.667 -4l1.667 4l1.333 -5",
+        ]),
+        "Word Assistant",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M5 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
+          "M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
+          "M19 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
+        ]),
+        "More",
+        False,
+      ),
+    ]),
+    weft_lustre.el(
+      attrs: [weft_lustre.styles([weft.height(length: weft.fill())])],
+      child: weft_lustre.none(),
     ),
+    nav_group([
+      nav_item(
+        icon_stroke(paths: [
+          "M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065z",
+          "M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0",
+        ]),
+        "Settings",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0",
+          "M12 17l0 .01",
+          "M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4",
+        ]),
+        "Get Help",
+        False,
+      ),
+      nav_item(
+        icon_stroke(paths: [
+          "M10 10m-7 0a7 7 0 1 0 14 0a7 7 0 1 0 -14 0",
+          "M21 21l-6 -6",
+        ]),
+        "Search",
+        False,
+      ),
+      dark_mode_item,
+    ]),
   ]
 
-  let sidebar_footer = text_muted(theme, "shadcn  m@example.com")
+  let sidebar_footer =
+    weft_lustre.row(
+      attrs: [
+        weft_lustre.styles([
+          weft.height(length: weft.fixed(length: weft.px(pixels: 48))),
+          weft.padding_xy(x: 4, y: 0),
+          weft.spacing(pixels: 8),
+          weft.align_items(value: weft.align_items_center()),
+          weft.rounded(radius: ui_theme.radius_md(theme)),
+        ]),
+      ],
+      children: [
+        weft_lustre.el(
+          attrs: [
+            weft_lustre.styles([
+              weft.width(length: weft.fixed(length: weft.px(pixels: 32))),
+              weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
+              weft.rounded(radius: weft.px(pixels: 9999)),
+              weft.display(value: weft.display_flex()),
+              weft.align_items(value: weft.align_items_center()),
+              weft.justify_content(value: weft.justify_center()),
+              weft.font_size(size: weft.rem(rem: 0.6875)),
+              weft.font_weight(weight: weft.font_weight_value(weight: 600)),
+              weft.background(color: case state.switch_on {
+                True -> weft.rgba(red: 255, green: 255, blue: 255, alpha: 0.15)
+                False -> weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.12)
+              }),
+              weft.text_color(color: case state.switch_on {
+                True -> weft.rgb(red: 255, green: 255, blue: 255)
+                False -> ui_theme.muted_text(theme)
+              }),
+            ]),
+          ],
+          child: weft_lustre.text(content: "CN"),
+        ),
+        weft_lustre.column(
+          attrs: [
+            weft_lustre.styles([
+              weft.width(length: weft.fill()),
+              weft.spacing(pixels: 1),
+              weft.justify_content(value: weft.justify_center()),
+            ]),
+          ],
+          children: [
+            weft_lustre.el(
+              attrs: [
+                weft_lustre.styles([
+                  weft.font_size(size: weft.rem(rem: 0.875)),
+                  weft.font_weight(weight: weft.font_weight_value(weight: 500)),
+                  weft.line_height(height: weft.line_height_multiple(
+                    multiplier: 1.25,
+                  )),
+                  weft.overflow_x(overflow: weft.overflow_hidden()),
+                ]),
+              ],
+              child: weft_lustre.text(content: "shadcn"),
+            ),
+            weft_lustre.el(
+              attrs: [
+                weft_lustre.styles([
+                  weft.font_size(size: weft.rem(rem: 0.75)),
+                  weft.text_color(color: ui_theme.muted_text(theme)),
+                  weft.line_height(height: weft.line_height_multiple(
+                    multiplier: 1.25,
+                  )),
+                  weft.overflow_x(overflow: weft.overflow_hidden()),
+                ]),
+              ],
+              child: weft_lustre.text(content: "m@example.com"),
+            ),
+          ],
+        ),
+        icon_stroke(paths: [
+          "M12 12m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
+          "M12 19m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
+          "M12 5m-1 0a1 1 0 1 0 2 0a1 1 0 1 0 -2 0",
+        ]),
+      ],
+    )
 
   let crumbs =
     weft_lustre.row(
@@ -2498,6 +3257,16 @@ pub fn main() {
             toast_open: False,
             table_rows: initial_table_rows(),
             drag: None,
+            reviewer_open: None,
+            nav_menu_open: None,
+            visible_columns: [
+              "header",
+              "section_type",
+              "status",
+              "target",
+              "limit",
+              "reviewer",
+            ],
           ),
           viewport_effect(),
         )
@@ -2581,6 +3350,22 @@ pub fn main() {
               Some(d) -> Some(DragState(..d, current_y: y))
             }
             #(AppState(..state, drag: new_drag), effect.none())
+          }
+          ReviewerOpenChanged(value) -> #(
+            AppState(..state, reviewer_open: value),
+            effect.none(),
+          )
+          NavMenuOpenChanged(value) -> #(
+            AppState(..state, nav_menu_open: value),
+            effect.none(),
+          )
+          ToggleColumn(col) -> {
+            let cols = state.visible_columns
+            let new_cols = case list.contains(cols, col) {
+              True -> list.filter(cols, fn(c) { c != col })
+              False -> list.append(cols, [col])
+            }
+            #(AppState(..state, visible_columns: new_cols), effect.none())
           }
           DragEnd -> {
             let new_rows = case state.drag {
@@ -2666,14 +3451,137 @@ pub fn main() {
             <> " }"
         }
 
+        let nav_dots_css =
+          ".nav-dots { transition: opacity 0.15s ease; } "
+          <> ".nav-item:hover .nav-dots { opacity: 1 !important; }"
+
         let color_scheme_style =
           weft_lustre.html(
             html_element.element("style", [], [
               html_element.text(
-                "html { color-scheme: " <> color_scheme <> "; }" <> chart_vars,
+                "html { color-scheme: "
+                <> color_scheme
+                <> "; }"
+                <> chart_vars
+                <> nav_dots_css,
               ),
             ]),
           )
+
+        let nav_context_menu = case state.nav_menu_open {
+          None -> weft_lustre.none()
+          Some(#(_, menu_y)) -> {
+            let #(overlay_bg, overlay_fg) = ui_theme.overlay_surface(theme)
+
+            let menu_item = fn(item_label: String) {
+              weft_lustre.element_tag(
+                tag: "button",
+                base_weft_attrs: [weft.el_layout()],
+                attrs: [
+                  weft_lustre.html_attribute(attribute.type_("button")),
+                  weft_lustre.html_attribute(
+                    event.on_click(NavMenuOpenChanged(None)),
+                  ),
+                  weft_lustre.styles([
+                    weft.display(value: weft.display_flex()),
+                    weft.align_items(value: weft.align_items_center()),
+                    weft.width(length: weft.fill()),
+                    weft.padding_xy(x: 8, y: 6),
+                    weft.rounded(radius: ui_theme.radius_md(theme)),
+                    weft.font_size(size: weft.rem(rem: 0.8125)),
+                    weft.cursor(cursor: weft.cursor_pointer()),
+                    weft.background(color: weft.rgba(
+                      red: 0,
+                      green: 0,
+                      blue: 0,
+                      alpha: 0.0,
+                    )),
+                    weft.border(
+                      width: weft.px(pixels: 0),
+                      style: weft.border_style_solid(),
+                      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+                    ),
+                    weft.mouse_over(attrs: [
+                      weft.background(color: case state.switch_on {
+                        True ->
+                          weft.rgba(
+                            red: 255,
+                            green: 255,
+                            blue: 255,
+                            alpha: 0.08,
+                          )
+                        False ->
+                          weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.06)
+                      }),
+                    ]),
+                    weft.text_color(color: overlay_fg),
+                  ]),
+                ],
+                children: [weft_lustre.text(content: item_label)],
+              )
+            }
+
+            weft_lustre.in_front(child: weft_lustre.el(
+              attrs: [
+                weft_lustre.styles([
+                  weft.position(value: weft.position_fixed()),
+                  weft.inset(length: weft.px(pixels: 0)),
+                ]),
+                weft_lustre.html_attribute(attribute.style("z-index", "9999")),
+                weft_lustre.html_attribute(
+                  event.on_click(NavMenuOpenChanged(None)),
+                ),
+              ],
+              child: weft_lustre.el(
+                attrs: [
+                  weft_lustre.html_attribute(
+                    event.advanced("click", {
+                      decode.success(event.handler(
+                        dispatch: TableNoop,
+                        prevent_default: False,
+                        stop_propagation: True,
+                      ))
+                    }),
+                  ),
+                  weft_lustre.styles([
+                    weft.position(value: weft.position_fixed()),
+                    weft.left(length: weft.px(pixels: 252)),
+                    weft.top(
+                      length: weft.px(pixels: float.round(menu_y -. 8.0)),
+                    ),
+                    weft.width(length: weft.fixed(length: weft.px(pixels: 160))),
+                    weft.background(color: overlay_bg),
+                    weft.border(
+                      width: weft.px(pixels: 1),
+                      style: weft.border_style_solid(),
+                      color: ui_theme.border_color(theme),
+                    ),
+                    weft.rounded(radius: ui_theme.radius_md(theme)),
+                    weft.shadows(shadows: [
+                      weft.shadow(
+                        x: weft.px(pixels: 0),
+                        y: weft.px(pixels: 4),
+                        blur: weft.px(pixels: 16),
+                        spread: weft.px(pixels: -2),
+                        color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.15),
+                      ),
+                    ]),
+                    weft.padding(pixels: 4),
+                  ]),
+                  weft_lustre.html_attribute(attribute.style("z-index", "10000")),
+                ],
+                child: weft_lustre.column(
+                  attrs: [weft_lustre.styles([weft.spacing(pixels: 1)])],
+                  children: [
+                    menu_item("Open"),
+                    menu_item("Share"),
+                    menu_item("Delete"),
+                  ],
+                ),
+              ),
+            ))
+          }
+        }
 
         weft_lustre.layout(
           attrs: [
@@ -2688,6 +3596,7 @@ pub fn main() {
             children: [
               color_scheme_style,
               app_shell(theme, state),
+              nav_context_menu,
             ],
           ),
         )

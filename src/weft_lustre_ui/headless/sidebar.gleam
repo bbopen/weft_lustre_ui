@@ -93,14 +93,17 @@ pub fn sidebar(
           attrs: aside_attrs,
           children: [
             header,
-            weft_lustre.column(attrs: [], children: body),
+            weft_lustre.column(
+              attrs: [weft_lustre.styles([weft.height(length: weft.fill())])],
+              children: body,
+            ),
             footer,
           ],
         ),
         weft_lustre.element_tag(
           tag: "main",
           base_weft_attrs: [
-            weft.column_layout(),
+            weft.el_layout(),
             weft.width(length: weft.fill()),
           ],
           attrs: inset_attrs,

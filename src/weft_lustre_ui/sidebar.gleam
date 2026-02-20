@@ -61,6 +61,8 @@ fn shell_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
   [
     weft.display(value: weft.display_flex()),
     weft.width(length: weft.fixed(length: weft.pct(pct: 100.0))),
+    weft.height(length: weft.fixed(length: weft.vh(vh: 100.0))),
+    weft.overflow_x(overflow: weft.overflow_hidden()),
     weft.background(color: surface_bg),
     weft.text_color(color: surface_fg),
     weft.font_family(families: theme.font_families(theme)),
@@ -72,20 +74,20 @@ fn aside_styles(
   theme _theme: theme.Theme,
   collapsed collapsed: Bool,
 ) -> List(weft.Attribute) {
-  let left_px = case collapsed {
-    True -> -288
-    False -> 0
+  let width_px = case collapsed {
+    True -> 0
+    False -> 288
   }
 
   [
-    weft.position(value: weft.position_fixed()),
-    weft.top(length: weft.px(pixels: 0)),
-    weft.left(length: weft.px(pixels: left_px)),
-    weft.width(length: weft.fixed(length: weft.px(pixels: 288))),
+    weft.width(length: weft.fixed(length: weft.px(pixels: width_px))),
     weft.height(length: weft.fixed(length: weft.vh(vh: 100.0))),
-    weft.padding(pixels: 8),
+    weft.padding(pixels: case collapsed {
+      True -> 0
+      False -> 8
+    }),
     weft.overflow_x(overflow: weft.overflow_hidden()),
-    weft.background(color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)),
+    weft.overflow_y(overflow: weft.overflow_auto()),
     case collapsed {
       True -> weft.pointer_events(value: weft.pointer_events_none())
       False -> weft.pointer_events(value: weft.pointer_events_auto())
@@ -111,9 +113,10 @@ fn aside_header_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
 
 fn aside_body_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
   [
-    weft.padding_xy(x: theme.space_md(theme) - 2, y: 10),
-    weft.spacing(pixels: 10),
+    weft.padding_xy(x: theme.space_md(theme) - 2, y: 8),
+    weft.spacing(pixels: 8),
     weft.width(length: weft.fixed(length: weft.pct(pct: 100.0))),
+    weft.height(length: weft.fill()),
   ]
 }
 
@@ -130,6 +133,7 @@ fn main_styles(theme theme: theme.Theme) -> List(weft.Attribute) {
 
   [
     weft.width(length: weft.fill()),
+    weft.overflow_y(overflow: weft.overflow_auto()),
     weft.background(color: surface_bg),
     weft.rounded(radius: weft.px(pixels: 14)),
     weft.border(
