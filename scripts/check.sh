@@ -12,6 +12,12 @@ gleam build --target javascript --warnings-as-errors
 gleam test
 gleam docs build
 
+# Auto-skip parity/visual when _refs/ is not present (e.g. CI)
+if [ ! -d "$ROOT_DIR/_refs/shadcn-ui" ]; then
+  WEFT_LUSTRE_UI_SKIP_PARITY="${WEFT_LUSTRE_UI_SKIP_PARITY:-1}"
+  WEFT_LUSTRE_UI_SKIP_VISUAL="${WEFT_LUSTRE_UI_SKIP_VISUAL:-1}"
+fi
+
 if [ "${WEFT_LUSTRE_UI_SKIP_PARITY:-0}" != "1" ]; then
   bash scripts/start-parity-servers.sh
   trap 'bash scripts/stop-parity-servers.sh >/dev/null 2>&1 || true' EXIT
