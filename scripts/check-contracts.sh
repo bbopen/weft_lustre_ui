@@ -6,6 +6,8 @@
 # Checks:
 #   - Every headless public function exists in styled counterpart
 #   - Parameter labels follow the mirror contract (theme prefix for render fns)
+#   - Return types match between headless and styled functions
+#   - Parameter types match (positionally aligned, skipping the theme param)
 #   - Types re-exported from headless to styled
 
 set -euo pipefail
