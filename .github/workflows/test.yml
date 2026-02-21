@@ -10,6 +10,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          path: weft_lustre_ui
+      - uses: actions/checkout@v4
+        with:
+          repository: bbopen/weft
+          path: weft
+      - uses: actions/checkout@v4
+        with:
+          repository: bbopen/weft_lustre
+          path: weft_lustre
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
@@ -20,9 +30,11 @@ jobs:
           rebar3-version: "3"
       - run: sudo apt-get update && sudo apt-get install -y imagemagick
       - run: gleam deps download
+        working-directory: weft_lustre_ui
       - run: bash scripts/check.sh
+        working-directory: weft_lustre_ui
       - if: always()
         uses: actions/upload-artifact@v4
         with:
           name: dashboard-benchmark-visual
-          path: examples/dashboard_benchmark/visual-artifacts
+          path: weft_lustre_ui/examples/dashboard_benchmark/visual-artifacts
