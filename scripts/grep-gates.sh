@@ -222,4 +222,39 @@ while IFS= read -r -d '' f; do
   check_pub_docs "$f"
 done < <(find "$src_dir" -type f -name '*.gleam' -print0)
 
+# ---------- headless/styled file parity ----------
+headless_dir="$src_dir/weft_lustre_ui/headless"
+styled_dir="$src_dir/weft_lustre_ui"
+
+if [[ -d "$headless_dir" ]]; then
+  parity_fail=0
+
+  # Every headless module must have a styled counterpart
+  for h in "$headless_dir"/*.gleam; do
+    [[ -f "$h" ]] || continue
+    base="$(basename "$h")"
+    if [[ ! -f "$styled_dir/$base" ]]; then
+      say "PARITY: headless/$base has no styled counterpart: $styled_dir/$base"
+      parity_fail=1
+    fi
+  done
+
+  # Every styled module (except theme.gleam) must have a headless counterpart
+  for s in "$styled_dir"/*.gleam; do
+    [[ -f "$s" ]] || continue
+    base="$(basename "$s")"
+    case "$base" in
+      theme.gleam|forms.gleam|styles.gleam) continue ;;  # utility modules, no headless pair
+    esac
+    if [[ ! -f "$headless_dir/$base" ]]; then
+      say "PARITY: styled/$base has no headless counterpart: $headless_dir/$base"
+      parity_fail=1
+    fi
+  done
+
+  if [[ "$parity_fail" -eq 1 ]]; then
+    fail "headless/styled file parity gate failed"
+  fi
+fi
+
 say "OK: grep gates passed"

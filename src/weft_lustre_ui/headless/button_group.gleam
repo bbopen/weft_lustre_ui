@@ -81,7 +81,8 @@ pub fn button_group_config_attrs(
   }
 }
 
-/// Check if the orientation is horizontal.
+/// Internal: check if the orientation is horizontal.
+@internal
 pub fn button_group_orientation_is_horizontal(
   orientation orientation: ButtonGroupOrientation,
 ) -> Bool {
@@ -91,7 +92,8 @@ pub fn button_group_orientation_is_horizontal(
   }
 }
 
-/// Check if the orientation is vertical.
+/// Internal: check if the orientation is vertical.
+@internal
 pub fn button_group_orientation_is_vertical(
   orientation orientation: ButtonGroupOrientation,
 ) -> Bool {

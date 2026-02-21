@@ -259,8 +259,8 @@ fn render_styled_page_item(
 /// background/foreground pair with an outline. Disabled navigation buttons
 /// render at reduced opacity.
 pub fn pagination(
-  config config: PaginationConfig(msg),
   theme theme: theme.Theme,
+  config config: PaginationConfig(msg),
 ) -> weft_lustre.Element(msg) {
   let current =
     headless_pagination.pagination_config_current(config: config.inner)

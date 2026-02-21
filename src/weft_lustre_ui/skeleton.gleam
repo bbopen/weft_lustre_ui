@@ -10,6 +10,47 @@ import weft_lustre
 import weft_lustre_ui/headless/skeleton as headless_skeleton
 import weft_lustre_ui/theme
 
+/// Skeleton configuration — aliased from headless.
+pub type SkeletonConfig(msg) =
+  headless_skeleton.SkeletonConfig(msg)
+
+/// Construct a default skeleton configuration.
+pub fn skeleton_config() -> SkeletonConfig(msg) {
+  headless_skeleton.skeleton_config()
+}
+
+/// Set the skeleton width.
+pub fn skeleton_width(
+  config config: SkeletonConfig(msg),
+  width width: weft.CssLength,
+) -> SkeletonConfig(msg) {
+  headless_skeleton.skeleton_width(config:, width:)
+}
+
+/// Set the skeleton height.
+pub fn skeleton_height(
+  config config: SkeletonConfig(msg),
+  height height: weft.CssLength,
+) -> SkeletonConfig(msg) {
+  headless_skeleton.skeleton_height(config:, height:)
+}
+
+/// Set the skeleton radius.
+pub fn skeleton_radius(
+  config config: SkeletonConfig(msg),
+  radius radius: weft.CssLength,
+) -> SkeletonConfig(msg) {
+  headless_skeleton.skeleton_radius(config:, radius:)
+}
+
+/// Append additional attributes to the skeleton.
+pub fn skeleton_attrs(
+  config config: SkeletonConfig(msg),
+  attrs attrs: List(weft_lustre.Attribute(msg)),
+) -> SkeletonConfig(msg) {
+  headless_skeleton.skeleton_attrs(config:, attrs:)
+}
+
 fn skeleton_styles(
   theme theme: theme.Theme,
   width width: Option(weft.CssLength),
@@ -45,7 +86,7 @@ fn skeleton_styles(
 /// Render a styled skeleton placeholder.
 pub fn skeleton(
   theme theme: theme.Theme,
-  config config: headless_skeleton.SkeletonConfig(msg),
+  config config: SkeletonConfig(msg),
 ) -> weft_lustre.Element(msg) {
   let width = headless_skeleton.skeleton_config_width(config: config)
   let height = headless_skeleton.skeleton_config_height(config: config)

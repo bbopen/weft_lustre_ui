@@ -101,7 +101,8 @@ pub fn spinner_config_attrs(
   }
 }
 
-/// Map a spinner size to its pixel value.
+/// Internal: map a spinner size to its pixel value.
+@internal
 pub fn spinner_size_pixels(size size: SpinnerSize) -> Int {
   case size {
     SpinnerSize(value: Small) -> 16

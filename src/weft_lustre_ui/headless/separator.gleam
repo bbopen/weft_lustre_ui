@@ -64,7 +64,8 @@ pub fn separator_decorative(
   SeparatorConfig(..config, decorative: decorative)
 }
 
-/// Read the orientation from a separator config.
+/// Internal: read the orientation from a separator config.
+@internal
 pub fn separator_config_orientation(
   config config: SeparatorConfig(msg),
 ) -> SeparatorOrientation {
@@ -73,14 +74,16 @@ pub fn separator_config_orientation(
   }
 }
 
-/// Read decorative mode from a separator config.
+/// Internal: read decorative mode from a separator config.
+@internal
 pub fn separator_config_decorative(config config: SeparatorConfig(msg)) -> Bool {
   case config {
     SeparatorConfig(decorative: decorative, ..) -> decorative
   }
 }
 
-/// Read all configured attributes from a separator config.
+/// Internal: read all configured attributes from a separator config.
+@internal
 pub fn separator_config_attrs(
   config config: SeparatorConfig(msg),
 ) -> List(weft_lustre.Attribute(msg)) {
@@ -89,7 +92,8 @@ pub fn separator_config_attrs(
   }
 }
 
-/// Is the orientation horizontal?
+/// Internal: is the orientation horizontal?
+@internal
 pub fn separator_orientation_is_horizontal(
   orientation orientation: SeparatorOrientation,
 ) -> Bool {
@@ -99,7 +103,8 @@ pub fn separator_orientation_is_horizontal(
   }
 }
 
-/// Is the orientation vertical?
+/// Internal: is the orientation vertical?
+@internal
 pub fn separator_orientation_is_vertical(
   orientation orientation: SeparatorOrientation,
 ) -> Bool {

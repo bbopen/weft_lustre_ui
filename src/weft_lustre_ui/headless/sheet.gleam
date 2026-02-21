@@ -23,7 +23,8 @@ pub fn sheet_right() -> SheetSide {
   SheetSide(value: Right)
 }
 
-/// Is the side left?
+/// Internal: is the side left?
+@internal
 pub fn sheet_side_is_left(side side: SheetSide) -> Bool {
   case side {
     SheetSide(value: Left) -> True
@@ -31,7 +32,8 @@ pub fn sheet_side_is_left(side side: SheetSide) -> Bool {
   }
 }
 
-/// Is the side right?
+/// Internal: is the side right?
+@internal
 pub fn sheet_side_is_right(side side: SheetSide) -> Bool {
   case side {
     SheetSide(value: Left) -> False
@@ -84,7 +86,8 @@ pub fn sheet_attrs(
   }
 }
 
-/// Read configured side.
+/// Internal: read configured side.
+@internal
 pub fn sheet_config_side(config config: SheetConfig(msg)) -> SheetSide {
   case config {
     SheetConfig(side:, ..) -> side

@@ -76,7 +76,8 @@ pub fn input_group_config_attrs(
   }
 }
 
-/// Check if an addon align value is inline-start.
+/// Internal: check if an addon align value is inline-start.
+@internal
 pub fn addon_align_is_start(align align: AddonAlign) -> Bool {
   case align {
     AddonAlign(value: Start) -> True
@@ -84,7 +85,8 @@ pub fn addon_align_is_start(align align: AddonAlign) -> Bool {
   }
 }
 
-/// Check if an addon align value is inline-end.
+/// Internal: check if an addon align value is inline-end.
+@internal
 pub fn addon_align_is_end(align align: AddonAlign) -> Bool {
   case align {
     AddonAlign(value: Start) -> False

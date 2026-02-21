@@ -212,7 +212,8 @@ pub fn sidebar_menu_button_attrs(
   }
 }
 
-/// Read whether the button is marked as active.
+/// Internal: read whether the button is marked as active.
+@internal
 pub fn sidebar_menu_button_is_active(
   config config: SidebarMenuButtonConfig(msg),
 ) -> Bool {

@@ -9,6 +9,8 @@ bash scripts/grep-gates.sh
 gleam format --check src test
 gleam build --target erlang --warnings-as-errors
 gleam build --target javascript --warnings-as-errors
+bash scripts/check-export-parity.sh
+bash scripts/check-contracts.sh
 gleam test
 gleam docs build
 

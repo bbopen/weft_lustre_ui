@@ -68,7 +68,8 @@ pub fn skeleton_attrs(
   }
 }
 
-/// Read the width configuration from a skeleton config.
+/// Internal: read the width configuration from a skeleton config.
+@internal
 pub fn skeleton_config_width(
   config config: SkeletonConfig(msg),
 ) -> Option(weft.CssLength) {
@@ -77,7 +78,8 @@ pub fn skeleton_config_width(
   }
 }
 
-/// Read the height configuration from a skeleton config.
+/// Internal: read the height configuration from a skeleton config.
+@internal
 pub fn skeleton_config_height(
   config config: SkeletonConfig(msg),
 ) -> Option(weft.CssLength) {
@@ -86,7 +88,8 @@ pub fn skeleton_config_height(
   }
 }
 
-/// Read the corner radius configuration from a skeleton config.
+/// Internal: read the corner radius configuration from a skeleton config.
+@internal
 pub fn skeleton_config_radius(
   config config: SkeletonConfig(msg),
 ) -> Option(weft.CssLength) {
@@ -95,7 +98,8 @@ pub fn skeleton_config_radius(
   }
 }
 
-/// Read all configured attributes from a skeleton config.
+/// Internal: read all configured attributes from a skeleton config.
+@internal
 pub fn skeleton_config_attrs(
   config config: SkeletonConfig(msg),
 ) -> List(weft_lustre.Attribute(msg)) {

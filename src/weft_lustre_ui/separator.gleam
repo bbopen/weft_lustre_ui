@@ -9,9 +9,56 @@ import weft_lustre
 import weft_lustre_ui/headless/separator as headless_separator
 import weft_lustre_ui/theme
 
+/// Separator configuration — aliased from headless.
+pub type SeparatorConfig(msg) =
+  headless_separator.SeparatorConfig(msg)
+
+/// Separator orientation — aliased from headless.
+pub type SeparatorOrientation =
+  headless_separator.SeparatorOrientation
+
+/// Horizontal orientation.
+pub fn separator_horizontal() -> SeparatorOrientation {
+  headless_separator.separator_horizontal()
+}
+
+/// Vertical orientation.
+pub fn separator_vertical() -> SeparatorOrientation {
+  headless_separator.separator_vertical()
+}
+
+/// Construct a default separator configuration.
+pub fn separator_config() -> SeparatorConfig(msg) {
+  headless_separator.separator_config()
+}
+
+/// Set separator orientation.
+pub fn separator_orientation(
+  config config: SeparatorConfig(msg),
+  orientation orientation: SeparatorOrientation,
+) -> SeparatorConfig(msg) {
+  headless_separator.separator_orientation(config:, orientation:)
+}
+
+/// Set separator decorative mode.
+pub fn separator_decorative(
+  config config: SeparatorConfig(msg),
+  decorative decorative: Bool,
+) -> SeparatorConfig(msg) {
+  headless_separator.separator_decorative(config:, decorative:)
+}
+
+/// Append additional attributes to the separator.
+pub fn separator_attrs(
+  config config: SeparatorConfig(msg),
+  attrs attrs: List(weft_lustre.Attribute(msg)),
+) -> SeparatorConfig(msg) {
+  headless_separator.separator_attrs(config:, attrs:)
+}
+
 fn separator_styles(
   theme theme: theme.Theme,
-  orientation orientation: headless_separator.SeparatorOrientation,
+  orientation orientation: SeparatorOrientation,
 ) -> List(weft.Attribute) {
   let line_color = theme.muted_text(theme)
 
@@ -43,7 +90,7 @@ fn separator_styles(
 /// configuration.
 pub fn separator(
   theme theme: theme.Theme,
-  config config: headless_separator.SeparatorConfig(msg),
+  config config: SeparatorConfig(msg),
 ) -> weft_lustre.Element(msg) {
   let orientation =
     headless_separator.separator_config_orientation(config: config)

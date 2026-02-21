@@ -118,7 +118,7 @@ pub fn pagination_config_attrs(
   }
 }
 
-/// Compute the range of page items to display.
+/// Internal: compute the range of page items to display.
 ///
 /// Always shows the first and last page, the current page, and `siblings`
 /// pages on each side of current. Uses `Ellipsis` where pages are skipped.
@@ -126,6 +126,7 @@ pub fn pagination_config_attrs(
 /// is shown instead of an ellipsis.
 ///
 /// Returns an empty list when `total` is less than 1.
+@internal
 pub fn pagination_range(
   current current: Int,
   total total: Int,

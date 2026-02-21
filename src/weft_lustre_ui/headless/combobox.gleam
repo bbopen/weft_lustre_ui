@@ -125,7 +125,8 @@ pub fn combobox_panel_attrs(
   }
 }
 
-/// Append search input attributes (appended to the built-in type/value/on_input attrs).
+/// Internal: append search input attributes (appended to the built-in type/value/on_input attrs).
+@internal
 pub fn combobox_search_input_attrs(
   config config: ComboboxConfig(a, msg),
   attrs attrs: List(weft_lustre.Attribute(msg)),
@@ -136,11 +137,12 @@ pub fn combobox_search_input_attrs(
   }
 }
 
-/// Set a function that returns additional attributes for each option row.
+/// Internal: set a function that returns additional attributes for each option row.
 ///
 /// The function receives the option value and a boolean indicating whether
 /// the option is currently selected, and returns a list of attributes to
 /// append to that option's root element.
+@internal
 pub fn combobox_option_attrs_fn(
   config config: ComboboxConfig(a, msg),
   option_attrs_fn option_attrs_fn: fn(a, Bool) ->
