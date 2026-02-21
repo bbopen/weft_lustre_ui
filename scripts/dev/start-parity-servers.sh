@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ARTIFACT_DIR="$ROOT_DIR/examples/dashboard_benchmark/visual-artifacts"
 BENCH_DIR="$ROOT_DIR/examples/dashboard_benchmark"
 SHADCN_DIR="$ROOT_DIR/_refs/shadcn-ui"
@@ -21,7 +21,7 @@ SKIP_BENCH_BUILD="${PARITY_SKIP_BENCH_BUILD:-0}"
 usage() {
   cat <<EOF
 Usage:
-  scripts/start-parity-servers.sh [--skip-install]
+  scripts/dev/start-parity-servers.sh [--skip-install]
 
 Options:
   --skip-install     Skip shadcn dependency install/build checks.

@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 ARTIFACT_DIR="$ROOT_DIR/examples/dashboard_benchmark/visual-artifacts"
 BENCH_PID_FILE="$ARTIFACT_DIR/server-4175.pid"
 REF_PID_FILE="$ARTIFACT_DIR/server-4180.pid"

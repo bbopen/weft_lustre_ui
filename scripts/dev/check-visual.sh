@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BENCHMARK_URL="${BENCHMARK_URL:-http://127.0.0.1:4175/index.html}"
 REFERENCE_URL="${REFERENCE_URL:-http://127.0.0.1:4180/dashboard}"
 MAX_DIFF_RATIO="${REFERENCE_VISUAL_MAX_DIFF_RATIO:-0.02}"
@@ -14,7 +14,7 @@ PORT="4175"
 usage() {
   cat <<EOF2
 Usage:
-  scripts/check-visual.sh [options]
+  scripts/dev/check-visual.sh [options]
 
 Options:
   --benchmark-url <url>    Benchmark URL (default: ${BENCHMARK_URL})
@@ -78,7 +78,7 @@ while [ "$#" -gt 0 ]; do
   shift
 done
 
-exec bash "$ROOT_DIR/scripts/check-reference-visual.sh" \
+exec bash "$ROOT_DIR/scripts/dev/check-reference-visual.sh" \
   --benchmark-url "$BENCHMARK_URL" \
   --reference-url "$REFERENCE_URL" \
   --max-diff-ratio "$MAX_DIFF_RATIO" \

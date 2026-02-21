@@ -2,25 +2,23 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 BENCHMARK_URL="${BENCHMARK_URL:-http://127.0.0.1:4175/index.html}"
 REFERENCE_URL="${REFERENCE_URL:-http://127.0.0.1:4180/dashboard}"
-MAX_DIFF_RATIO="${REFERENCE_VISUAL_MAX_DIFF_RATIO:-0.02}"
-DIFF_METRIC="${REFERENCE_VISUAL_DIFF_METRIC:-MAE}"
-ARTIFACT_DIR="${REFERENCE_VISUAL_ARTIFACT_DIR:-$ROOT_DIR/examples/dashboard_benchmark/visual-artifacts/reference-diff}"
+ARTIFACT_DIR="${SIGNATURE_ARTIFACT_DIR:-$ROOT_DIR/examples/dashboard_benchmark/visual-artifacts}"
+DEBUG_JSON="${SIGNATURE_DEBUG_JSON:-$ARTIFACT_DIR/reference-signature-debug.json}"
 
 usage() {
   cat <<EOF
 Usage:
-  scripts/check-reference-visual.sh [options]
+  scripts/dev/check-reference-signature.sh [options]
 
 Options:
-  --benchmark-url <url>    Benchmark URL (default: ${BENCHMARK_URL})
-  --reference-url <url>    Reference URL (default: ${REFERENCE_URL})
-  --max-diff-ratio <num>   Max allowed diff ratio in [0,1] (default: ${MAX_DIFF_RATIO})
-  --metric <name>          ImageMagick metric: AE|MAE|RMSE|DSSIM (default: ${DIFF_METRIC})
-  --artifact-dir <dir>     Output directory for benchmark/reference/diff screenshots
-  --help                   Show this message
+  --benchmark-url <url>   Benchmark URL (default: ${BENCHMARK_URL})
+  --reference-url <url>   Reference URL (default: ${REFERENCE_URL})
+  --artifact-dir <dir>    Signature artifact directory
+  --debug-json <path>     Signature debug JSON path
+  --help                  Show this message
 EOF
 }
 
@@ -34,16 +32,12 @@ while [ "$#" -gt 0 ]; do
       REFERENCE_URL="$2"
       shift
       ;;
-    --max-diff-ratio)
-      MAX_DIFF_RATIO="$2"
-      shift
-      ;;
-    --metric)
-      DIFF_METRIC="$2"
-      shift
-      ;;
     --artifact-dir)
       ARTIFACT_DIR="$2"
+      shift
+      ;;
+    --debug-json)
+      DEBUG_JSON="$2"
       shift
       ;;
     --help)
@@ -77,11 +71,11 @@ if ! curl -sf "$REFERENCE_URL" >/dev/null 2>&1; then
   exit 1
 fi
 
-REFERENCE_VISUAL_ARTIFACT_DIR="$ARTIFACT_DIR" \
-REFERENCE_VISUAL_MAX_DIFF_RATIO="$MAX_DIFF_RATIO" \
-REFERENCE_VISUAL_DIFF_METRIC="$DIFF_METRIC" \
+SIGNATURE_ARTIFACT_DIR="$ARTIFACT_DIR" \
+SIGNATURE_DEBUG_JSON="$DEBUG_JSON" \
 BENCHMARK_URL="$BENCHMARK_URL" \
 REFERENCE_URL="$REFERENCE_URL" \
 npx --yes \
   --package=playwright@1.54.1 \
-  node "$ROOT_DIR/scripts/reference-visual-diff.mjs"
+  node "$ROOT_DIR/scripts/dev/reference-signature-check.mjs"
+

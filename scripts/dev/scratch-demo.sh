@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PACKAGE_NAME="weft_lustre_ui_scratch"
 SCRATCH_DIR="${ROOT_DIR}/scratch"
 
@@ -15,7 +15,7 @@ OPEN_BROWSER=0
 usage() {
   cat <<'EOF'
 Usage:
-  scripts/scratch-demo.sh [options] [path]
+  scripts/dev/scratch-demo.sh [options] [path]
 
 Options:
   --serve              Start local HTTP server after generation (default)
@@ -107,7 +107,7 @@ This directory is intentionally untracked via repo-local config in `.git/info/ex
 Use it for manual, local visual checks before promoting examples into packages.
 
 Committed benchmark parity app lives in `examples/dashboard_benchmark`.
-Use `scripts/check-visual.sh` for tracked desktop/mobile regression checks.
+Use `scripts/dev/check-visual.sh` for tracked desktop/mobile regression checks.
 
 ### Recommended use
 
@@ -1099,7 +1099,7 @@ if [ "$BUILD" -eq 1 ]; then
 fi
 
 echo "Created scratch workspace at: $SCRATCH_DIR"
-echo "Run with: bash scripts/scratch-demo.sh [options] [path]"
+echo "Run with: bash scripts/dev/scratch-demo.sh [options] [path]"
 
 if [ "$SERVE" -eq 0 ]; then
   echo
