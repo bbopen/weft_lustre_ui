@@ -358,8 +358,8 @@ fn theme_for_state(state: AppState) -> weft_lustre_ui.Theme {
         alpha: 0.7,
       ))
       |> ui_theme.theme_button_shadows(
-        base: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
-        hover: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+        base: weft.transparent(),
+        hover: weft.transparent(),
       )
   }
 }
@@ -641,7 +641,7 @@ fn insights_table(
             weft.border(
               width: weft.px(pixels: 1),
               style: weft.border_style_solid(),
-              color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+              color: weft.transparent(),
             ),
             weft.shadows(shadows: []),
           ]),
@@ -831,8 +831,7 @@ fn insights_table(
                           weft.background(color: case is_selected {
                             True ->
                               weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.06)
-                            False ->
-                              weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)
+                            False -> weft.transparent()
                           }),
                           weft.border(
                             width: weft.px(pixels: 0),
@@ -1366,9 +1365,9 @@ fn benchmark_tabs(
                   |> wc_common.series_name(name: "Desktop"),
               )
               |> wc_area.area_curve_type(wc_curve.MonotoneX)
-              |> wc_area.area_fill("#71717a")
+              |> wc_area.area_fill(weft.css_color(value: "#71717a"))
               |> wc_area.area_fill_opacity(0.3)
-              |> wc_area.area_stroke("#71717a")
+              |> wc_area.area_stroke(weft.css_color(value: "#71717a"))
               |> wc_area.area_stroke_width(2.0),
             ),
             wc.area(
@@ -1378,9 +1377,9 @@ fn benchmark_tabs(
                   |> wc_common.series_name(name: "Mobile"),
               )
               |> wc_area.area_curve_type(wc_curve.MonotoneX)
-              |> wc_area.area_fill("#a1a1aa")
+              |> wc_area.area_fill(weft.css_color(value: "#a1a1aa"))
               |> wc_area.area_fill_opacity(0.2)
-              |> wc_area.area_stroke("#a1a1aa")
+              |> wc_area.area_stroke(weft.css_color(value: "#a1a1aa"))
               |> wc_area.area_stroke_width(1.5),
             ),
             wc.tooltip(wc_tooltip.tooltip_config()),
@@ -1476,7 +1475,7 @@ fn benchmark_tabs(
                   weft.border(
                     width: weft.px(pixels: 1),
                     style: weft.border_style_solid(),
-                    color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+                    color: weft.transparent(),
                   )
               },
             ]),
@@ -1619,7 +1618,7 @@ fn benchmark_tabs(
                     weft.border(
                       width: weft.px(pixels: 0),
                       style: weft.border_style_solid(),
-                      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+                      color: weft.transparent(),
                     ),
                     weft.mouse_over(attrs: [
                       weft.background(color: case state.switch_on {
@@ -1655,8 +1654,7 @@ fn benchmark_tabs(
                         weft.rounded(radius: weft.px(pixels: 3)),
                         weft.background(color: case is_visible {
                           True -> ui_theme.border_color(theme)
-                          False ->
-                            weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0)
+                          False -> weft.transparent()
                         }),
                       ]),
                     ],
@@ -1986,7 +1984,7 @@ fn chart_card(
   let day_window = case state.density {
     "last_30_days" -> 30
     "last_7_days" -> 7
-    _ -> 90
+    _ -> 91
   }
   let filtered_chart_data = take_last(chart_data, day_window)
 
@@ -2028,7 +2026,9 @@ fn chart_card(
               wc.x_axis(
                 wc_axis.x_axis_config()
                 |> wc_axis.axis_tick_line(show: False)
-                |> wc_axis.axis_axis_line(show: False),
+                |> wc_axis.axis_axis_line(show: False)
+                |> wc_axis.axis_interval(wc_axis.EquidistantPreserveStart)
+                |> wc_axis.axis_min_tick_gap(gap: 0),
               ),
               wc.y_axis(wc_axis.y_axis_config() |> wc_axis.axis_hide()),
               wc.area(
@@ -2042,17 +2042,19 @@ fn chart_card(
                 |> wc_area.area_gradient_fill("chart-mobile-grad", [
                   wc_area.GradientStop(
                     offset: "5%",
-                    color: "#a1a1aa",
+                    color: weft.css_color(value: "#a1a1aa"),
                     opacity: 0.8,
                   ),
                   wc_area.GradientStop(
                     offset: "95%",
-                    color: "#a1a1aa",
+                    color: weft.css_color(value: "#a1a1aa"),
                     opacity: 0.1,
                   ),
                 ])
-                |> wc_area.area_fill("url(#chart-mobile-grad)")
-                |> wc_area.area_stroke("#a1a1aa")
+                |> wc_area.area_fill(weft.css_color(
+                  value: "url(#chart-mobile-grad)",
+                ))
+                |> wc_area.area_stroke(weft.css_color(value: "#a1a1aa"))
                 |> wc_area.area_stroke_width(2.0),
               ),
               wc.area(
@@ -2066,17 +2068,19 @@ fn chart_card(
                 |> wc_area.area_gradient_fill("chart-desktop-grad", [
                   wc_area.GradientStop(
                     offset: "5%",
-                    color: "#71717a",
+                    color: weft.css_color(value: "#71717a"),
                     opacity: 1.0,
                   ),
                   wc_area.GradientStop(
                     offset: "95%",
-                    color: "#71717a",
+                    color: weft.css_color(value: "#71717a"),
                     opacity: 0.1,
                   ),
                 ])
-                |> wc_area.area_fill("url(#chart-desktop-grad)")
-                |> wc_area.area_stroke("#71717a")
+                |> wc_area.area_fill(weft.css_color(
+                  value: "url(#chart-desktop-grad)",
+                ))
+                |> wc_area.area_stroke(weft.css_color(value: "#71717a"))
                 |> wc_area.area_stroke_width(2.0),
               ),
               wc.tooltip(
@@ -2157,7 +2161,7 @@ fn app_shell(
         base_weft_attrs: [weft.el_layout()],
         attrs: [
           weft_lustre.html_attribute(attribute.type_("button")),
-          weft_lustre.html_attribute(attribute.class("nav-dots")),
+          // nav-dots class removed — no external CSS dependency
           weft_lustre.html_attribute(
             event.on("click", {
               use x <- decode.field("clientX", decode.int)
@@ -2179,7 +2183,7 @@ fn app_shell(
             weft.border(
               width: weft.px(pixels: 0),
               style: weft.border_style_solid(),
-              color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+              color: weft.transparent(),
             ),
             weft.background(color: weft.rgba(
               red: 0,
@@ -2196,7 +2200,7 @@ fn app_shell(
 
     weft_lustre.row(
       attrs: [
-        weft_lustre.html_attribute(attribute.class("nav-item")),
+        // nav-item class removed — no external CSS dependency
         weft_lustre.styles([
           weft.height(length: weft.fixed(length: weft.px(pixels: 32))),
           weft.padding_xy(x: 8, y: 0),
@@ -3189,7 +3193,7 @@ pub fn main() {
                     weft.border(
                       width: weft.px(pixels: 0),
                       style: weft.border_style_solid(),
-                      color: weft.rgba(red: 0, green: 0, blue: 0, alpha: 0.0),
+                      color: weft.transparent(),
                     ),
                     weft.mouse_over(attrs: [
                       weft.background(color: case state.switch_on {
@@ -3290,10 +3294,12 @@ pub fn main() {
         weft_lustre.layout(
           attrs: [
             weft_lustre.html_attribute(attribute.id("benchmark-app")),
-            weft_lustre.html_attribute(attribute.style(
-              "color-scheme",
-              color_scheme,
-            )),
+            weft_lustre.styles([
+              case state.switch_on {
+                True -> weft.color_scheme(scheme: weft.color_scheme_dark())
+                False -> weft.color_scheme(scheme: weft.color_scheme_light())
+              },
+            ]),
           ],
           child: weft_lustre.column(
             attrs: [weft_lustre.styles([weft.spacing(pixels: 0)])],
