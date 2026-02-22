@@ -164,6 +164,48 @@ fn find_event_in_node(
   }
 }
 
+type ComboboxEventMessage {
+  ComboboxSelected(value: String)
+  ComboboxToggled(open: Bool)
+}
+
+fn click_messages_from_attributes(
+  attrs: List(vattr.Attribute(msg)),
+) -> List(msg) {
+  list.flat_map(attrs, fn(attr) {
+    case attr {
+      vattr.Event(name: "click", handler:, ..) ->
+        case decode.run(dynamic.nil(), handler) {
+          Ok(vattr.Handler(message:, ..)) -> [message]
+          Error(_) -> []
+        }
+      _ -> []
+    }
+  })
+}
+
+fn click_messages(element: weft_lustre.Element(msg)) -> List(msg) {
+  let #(_, nodes) = weft_lustre.compile([], element)
+  list.flat_map(nodes, click_messages_from_node)
+}
+
+fn click_messages_from_node(element: vnode.Element(msg)) -> List(msg) {
+  case element {
+    vnode.Element(attributes:, children:, ..) ->
+      list.append(
+        click_messages_from_attributes(attributes),
+        list.flat_map(children, click_messages_from_node),
+      )
+    vnode.Fragment(children:, ..) ->
+      list.flat_map(children, click_messages_from_node)
+    vnode.UnsafeInnerHtml(attributes:, ..) ->
+      click_messages_from_attributes(attributes)
+    vnode.Map(child:, ..) -> click_messages_from_node(child)
+    vnode.Memo(view:, ..) -> click_messages_from_node(view())
+    vnode.Text(..) -> []
+  }
+}
+
 pub fn weft_lustre_ui_tests() {
   describe("weft_lustre_ui", [
     describe("headless", [
@@ -2170,6 +2212,62 @@ pub fn weft_lustre_ui_tests() {
 
         string.contains(rendered, "Cherry")
         |> expect.to_equal(expected: False)
+      }),
+      it("combobox option click path includes select and close messages", fn() {
+        let opts = [
+          headless_combobox.combobox_option(value: "a", label: "Apple"),
+        ]
+
+        let view =
+          headless_combobox.combobox(
+            config: headless_combobox.combobox_config(
+              options: opts,
+              value: None,
+              on_select: fn(selected) {
+                case selected {
+                  Some(value) -> ComboboxSelected(value: value)
+                  None -> ComboboxSelected(value: "")
+                }
+              },
+              search: "",
+              on_search: fn(_s) { ComboboxSelected(value: "") },
+              open: True,
+              on_toggle: fn(open) { ComboboxToggled(open: open) },
+              placeholder: "Choose",
+              anchor_rect: None,
+              overlay_size: weft.size(width: 200, height: 300),
+              viewport: weft.size(width: 1280, height: 800),
+              option_to_string: fn(v) { v },
+            ),
+          )
+
+        let messages = click_messages(view)
+
+        let selected_count =
+          messages
+          |> list.filter(fn(msg) {
+            case msg {
+              ComboboxSelected(value: "a") -> True
+              _ -> False
+            }
+          })
+          |> list.length
+
+        let close_count =
+          messages
+          |> list.filter(fn(msg) {
+            case msg {
+              ComboboxToggled(open: False) -> True
+              _ -> False
+            }
+          })
+          |> list.length
+
+        selected_count
+        |> expect.to_equal(expected: 1)
+
+        close_count
+        |> expect.to_equal(expected: 2)
       }),
       it(
         "styled alert uses border_color for default and danger for destructive",
