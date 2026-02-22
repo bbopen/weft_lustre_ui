@@ -157,6 +157,7 @@ pub fn radio_group(
             "aria-disabled",
             "true",
           )),
+          weft_lustre.html_attribute(attribute.inert(True)),
         ]
         False -> []
       }

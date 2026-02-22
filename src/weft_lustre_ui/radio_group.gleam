@@ -115,6 +115,7 @@ pub fn radio_group(
   let disabled_attrs = case disabled {
     True -> [
       weft_lustre.html_attribute(attribute.attribute("aria-disabled", "true")),
+      weft_lustre.html_attribute(attribute.inert(True)),
     ]
     False -> []
   }
