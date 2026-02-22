@@ -250,10 +250,12 @@ pub fn context_menu(
               tag: "div",
               base_weft_attrs: [weft.el_layout()],
               attrs: [
-                weft_lustre.html_attribute(event.on(
-                  "contextmenu",
-                  decode.success(on_open_change(!open)),
-                )),
+                weft_lustre.html_attribute(
+                  event.prevent_default(event.on(
+                    "contextmenu",
+                    decode.success(on_open_change(!open)),
+                  )),
+                ),
                 ..trigger_attrs
               ],
               children: [trigger],
