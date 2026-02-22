@@ -1,9 +1,13 @@
+import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre/attribute
 import lustre/effect
 import lustre/element
+import lustre/vdom/vattr
+import lustre/vdom/vnode
 import startest.{describe, it}
 import startest/expect
 import weft
@@ -100,6 +104,64 @@ fn overlay_with_solution() -> weft.OverlaySolution {
   )
   |> weft.overlay_offset(pixels: 4)
   |> weft.solve_overlay
+}
+
+fn find_event_attribute(
+  attrs: List(vattr.Attribute(msg)),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  case
+    list.find(attrs, fn(attr) {
+      case attr {
+        vattr.Event(name:, ..) -> name == event_name
+        _ -> False
+      }
+    })
+  {
+    Ok(attr) -> Some(attr)
+    Error(Nil) -> None
+  }
+}
+
+fn find_first_event(
+  element: weft_lustre.Element(msg),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  let #(_, nodes) = weft_lustre.compile([], element)
+  find_event_in_nodes(nodes, event_name)
+}
+
+fn find_event_in_nodes(
+  nodes: List(vnode.Element(msg)),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  case nodes {
+    [] -> None
+    [node, ..rest] ->
+      case find_event_in_node(node, event_name) {
+        Some(attr) -> Some(attr)
+        None -> find_event_in_nodes(rest, event_name)
+      }
+  }
+}
+
+fn find_event_in_node(
+  node: vnode.Element(msg),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  case node {
+    vnode.Element(attributes:, children:, ..) ->
+      case find_event_attribute(attributes, event_name) {
+        Some(attr) -> Some(attr)
+        None -> find_event_in_nodes(children, event_name)
+      }
+    vnode.Fragment(children:, ..) -> find_event_in_nodes(children, event_name)
+    vnode.UnsafeInnerHtml(attributes:, ..) ->
+      find_event_attribute(attributes, event_name)
+    vnode.Map(child:, ..) -> find_event_in_node(child, event_name)
+    vnode.Memo(view:, ..) -> find_event_in_node(view(), event_name)
+    vnode.Text(..) -> None
+  }
 }
 
 pub fn weft_lustre_ui_tests() {
@@ -3457,6 +3519,42 @@ pub fn weft_lustre_ui_tests() {
 
           string.contains(html, "role=\"menu\"")
           |> expect.to_equal(expected: True)
+        }),
+        it("context_menu trigger prevents native context menu default", fn() {
+          let view =
+            headless_context_menu.context_menu(
+              config: headless_context_menu.context_menu_config(
+                open: False,
+                on_open_change: fn(v) { v },
+              ),
+              trigger: weft_lustre.text(content: "Right click me"),
+              items: [],
+            )
+
+          let contextmenu_attr = find_first_event(view, "contextmenu")
+
+          case contextmenu_attr {
+            Some(vattr.Event(handler:, prevent_default:, ..)) -> {
+              let prevents_default = case prevent_default {
+                vattr.Always(..) -> True
+                _ -> False
+              }
+
+              prevents_default
+              |> expect.to_equal(expected: True)
+
+              let open_result = decode.run(dynamic.nil(), handler)
+
+              let open_message = case open_result {
+                Ok(vattr.Handler(message:, ..)) -> message
+                Error(_) -> False
+              }
+
+              open_message
+              |> expect.to_equal(expected: True)
+            }
+            _ -> False |> expect.to_equal(expected: True)
+          }
         }),
         it("context_menu_item renders role=menuitem", fn() {
           let view =
