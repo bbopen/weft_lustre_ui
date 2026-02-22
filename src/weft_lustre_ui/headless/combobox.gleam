@@ -231,11 +231,7 @@ fn build_panel(
             attrs: list.append(
               [
                 weft_lustre.html_attribute(
-                  event.on_click({
-                    let select_msg = on_select(Some(opt.value))
-                    let _ = on_toggle(False)
-                    select_msg
-                  }),
+                  event.on_click(on_select(Some(opt.value))),
                 ),
                 weft_lustre.html_attribute(
                   attribute.data("weft-combobox-selected", case is_selected {
@@ -252,7 +248,10 @@ fn build_panel(
 
       weft_lustre.column(attrs: panel_attrs, children: [
         search_input,
-        weft_lustre.column(attrs: [], children: option_rows),
+        weft_lustre.column(
+          attrs: [weft_lustre.html_attribute(event.on_click(on_toggle(False)))],
+          children: option_rows,
+        ),
       ])
     }
   }
