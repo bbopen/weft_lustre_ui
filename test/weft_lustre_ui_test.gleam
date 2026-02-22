@@ -1,9 +1,13 @@
+import gleam/dynamic
+import gleam/dynamic/decode
 import gleam/list
-import gleam/option.{None, Some}
+import gleam/option.{type Option, None, Some}
 import gleam/string
 import lustre/attribute
 import lustre/effect
 import lustre/element
+import lustre/vdom/vattr
+import lustre/vdom/vnode
 import startest.{describe, it}
 import startest/expect
 import weft
@@ -100,6 +104,64 @@ fn overlay_with_solution() -> weft.OverlaySolution {
   )
   |> weft.overlay_offset(pixels: 4)
   |> weft.solve_overlay
+}
+
+fn find_event_attribute(
+  attrs: List(vattr.Attribute(msg)),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  case
+    list.find(attrs, fn(attr) {
+      case attr {
+        vattr.Event(name:, ..) -> name == event_name
+        _ -> False
+      }
+    })
+  {
+    Ok(attr) -> Some(attr)
+    Error(Nil) -> None
+  }
+}
+
+fn find_first_event(
+  element: weft_lustre.Element(msg),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  let #(_, nodes) = weft_lustre.compile([], element)
+  find_event_in_nodes(nodes, event_name)
+}
+
+fn find_event_in_nodes(
+  nodes: List(vnode.Element(msg)),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  case nodes {
+    [] -> None
+    [node, ..rest] ->
+      case find_event_in_node(node, event_name) {
+        Some(attr) -> Some(attr)
+        None -> find_event_in_nodes(rest, event_name)
+      }
+  }
+}
+
+fn find_event_in_node(
+  node: vnode.Element(msg),
+  event_name: String,
+) -> Option(vattr.Attribute(msg)) {
+  case node {
+    vnode.Element(attributes:, children:, ..) ->
+      case find_event_attribute(attributes, event_name) {
+        Some(attr) -> Some(attr)
+        None -> find_event_in_nodes(children, event_name)
+      }
+    vnode.Fragment(children:, ..) -> find_event_in_nodes(children, event_name)
+    vnode.UnsafeInnerHtml(attributes:, ..) ->
+      find_event_attribute(attributes, event_name)
+    vnode.Map(child:, ..) -> find_event_in_node(child, event_name)
+    vnode.Memo(view:, ..) -> find_event_in_node(view(), event_name)
+    vnode.Text(..) -> None
+  }
 }
 
 pub fn weft_lustre_ui_tests() {
@@ -1009,6 +1071,93 @@ pub fn weft_lustre_ui_tests() {
 
         string.contains(rendered, "disabled")
         |> expect.to_equal(expected: True)
+      }),
+      it("toggle keydown prevents default for Enter and Space", fn() {
+        let view =
+          headless_toggle.toggle(
+            config: headless_toggle.toggle_config(
+              pressed: False,
+              on_toggle: fn(value) { value },
+            ),
+            child: weft_lustre.text(content: "Bold"),
+          )
+
+        let keydown_attr = find_first_event(view, "keydown")
+
+        case keydown_attr {
+          Some(vattr.Event(handler:, prevent_default:, ..)) -> {
+            let uses_conditional_prevent_default = case prevent_default {
+              vattr.Possible(..) -> True
+              _ -> False
+            }
+
+            uses_conditional_prevent_default
+            |> expect.to_equal(expected: True)
+
+            let enter_result =
+              decode.run(
+                dynamic.properties([
+                  #(dynamic.string("key"), dynamic.string("Enter")),
+                ]),
+                handler,
+              )
+
+            let space_result =
+              decode.run(
+                dynamic.properties([
+                  #(dynamic.string("key"), dynamic.string(" ")),
+                ]),
+                handler,
+              )
+
+            let other_result =
+              decode.run(
+                dynamic.properties([
+                  #(dynamic.string("key"), dynamic.string("Escape")),
+                ]),
+                handler,
+              )
+
+            let enter_prevents_default = case enter_result {
+              Ok(vattr.Handler(prevent_default:, ..)) -> prevent_default
+              Error(_) -> False
+            }
+
+            let space_prevents_default = case space_result {
+              Ok(vattr.Handler(prevent_default:, ..)) -> prevent_default
+              Error(_) -> False
+            }
+
+            let enter_message = case enter_result {
+              Ok(vattr.Handler(message:, ..)) -> message
+              Error(_) -> False
+            }
+
+            let space_message = case space_result {
+              Ok(vattr.Handler(message:, ..)) -> message
+              Error(_) -> False
+            }
+
+            enter_prevents_default
+            |> expect.to_equal(expected: True)
+
+            space_prevents_default
+            |> expect.to_equal(expected: True)
+
+            enter_message
+            |> expect.to_equal(expected: True)
+
+            space_message
+            |> expect.to_equal(expected: True)
+
+            case other_result {
+              Error(_) -> True
+              Ok(_) -> False
+            }
+            |> expect.to_equal(expected: True)
+          }
+          _ -> False |> expect.to_equal(expected: True)
+        }
       }),
       it("native_select renders a <select> with options", fn() {
         let opts = [
@@ -2367,6 +2516,82 @@ pub fn weft_lustre_ui_tests() {
 
         string.contains(css, "cursor:not-allowed;")
         |> expect.to_equal(expected: True)
+      }),
+      it("styled toggle keydown prevents default for Enter and Space", fn() {
+        let t = theme.theme_default()
+
+        let view =
+          ui_toggle.toggle(
+            theme: t,
+            config: ui_toggle.toggle_config(
+              pressed: False,
+              on_toggle: fn(value) { value },
+            ),
+            child: weft_lustre.text(content: "Bold"),
+          )
+
+        let keydown_attr = find_first_event(view, "keydown")
+
+        case keydown_attr {
+          Some(vattr.Event(handler:, prevent_default:, ..)) -> {
+            let uses_conditional_prevent_default = case prevent_default {
+              vattr.Possible(..) -> True
+              _ -> False
+            }
+
+            uses_conditional_prevent_default
+            |> expect.to_equal(expected: True)
+
+            let enter_result =
+              decode.run(
+                dynamic.properties([
+                  #(dynamic.string("key"), dynamic.string("Enter")),
+                ]),
+                handler,
+              )
+
+            let space_result =
+              decode.run(
+                dynamic.properties([
+                  #(dynamic.string("key"), dynamic.string(" ")),
+                ]),
+                handler,
+              )
+
+            let enter_prevents_default = case enter_result {
+              Ok(vattr.Handler(prevent_default:, ..)) -> prevent_default
+              Error(_) -> False
+            }
+
+            let space_prevents_default = case space_result {
+              Ok(vattr.Handler(prevent_default:, ..)) -> prevent_default
+              Error(_) -> False
+            }
+
+            let enter_message = case enter_result {
+              Ok(vattr.Handler(message:, ..)) -> message
+              Error(_) -> False
+            }
+
+            let space_message = case space_result {
+              Ok(vattr.Handler(message:, ..)) -> message
+              Error(_) -> False
+            }
+
+            enter_prevents_default
+            |> expect.to_equal(expected: True)
+
+            space_prevents_default
+            |> expect.to_equal(expected: True)
+
+            enter_message
+            |> expect.to_equal(expected: True)
+
+            space_message
+            |> expect.to_equal(expected: True)
+          }
+          _ -> False |> expect.to_equal(expected: True)
+        }
       }),
       it("styled native_select uses input surface colors and border", fn() {
         let t =

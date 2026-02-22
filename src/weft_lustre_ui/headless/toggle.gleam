@@ -116,11 +116,24 @@ pub fn toggle(
             False -> [
               weft_lustre.html_attribute(event.on_click(on_toggle(!pressed))),
               weft_lustre.html_attribute(
-                event.on("keydown", {
+                event.advanced("keydown", {
                   use key <- decode.field("key", decode.string)
                   case key {
-                    " " | "Enter" -> decode.success(on_toggle(!pressed))
-                    _ -> decode.failure(on_toggle(!pressed), "non-toggle key")
+                    " " | "Enter" ->
+                      decode.success(event.handler(
+                        dispatch: on_toggle(!pressed),
+                        prevent_default: True,
+                        stop_propagation: False,
+                      ))
+                    _ ->
+                      decode.failure(
+                        event.handler(
+                          dispatch: on_toggle(!pressed),
+                          prevent_default: False,
+                          stop_propagation: False,
+                        ),
+                        "non-toggle key",
+                      )
                   }
                 }),
               ),
