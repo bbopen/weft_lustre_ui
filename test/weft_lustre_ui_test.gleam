@@ -3434,6 +3434,9 @@ pub fn weft_lustre_ui_tests() {
 
           string.contains(html, "aria-disabled=\"true\"")
           |> expect.to_equal(expected: True)
+
+          string.contains(html, "inert")
+          |> expect.to_equal(expected: True)
         }),
       ]),
       describe("styled radio_group", [
@@ -3454,6 +3457,28 @@ pub fn weft_lustre_ui_tests() {
           let css = weft_lustre.debug_stylesheet(attrs: [], child: view)
 
           string.contains(css, "gap:12px;")
+          |> expect.to_equal(expected: True)
+        }),
+        it("styled radio_group disabled renders inert", fn() {
+          let t = theme.theme_default()
+
+          let view =
+            ui_radio_group.radio_group(
+              theme: t,
+              config: ui_radio_group.radio_group_config(
+                name: "color",
+                value: "red",
+                on_change: fn(_v) { "changed" },
+              )
+                |> ui_radio_group.radio_group_disabled(),
+              items: [],
+            )
+
+          let html =
+            weft_lustre.layout(attrs: [], child: view)
+            |> element.to_string
+
+          string.contains(html, "inert")
           |> expect.to_equal(expected: True)
         }),
       ]),
