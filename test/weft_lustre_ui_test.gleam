@@ -3683,6 +3683,42 @@ pub fn weft_lustre_ui_tests() {
           string.contains(html, "role=\"menu\"")
           |> expect.to_equal(expected: True)
         }),
+        it("context_menu trigger prevents native context menu default", fn() {
+          let view =
+            headless_context_menu.context_menu(
+              config: headless_context_menu.context_menu_config(
+                open: False,
+                on_open_change: fn(v) { v },
+              ),
+              trigger: weft_lustre.text(content: "Right click me"),
+              items: [],
+            )
+
+          let contextmenu_attr = find_first_event(view, "contextmenu")
+
+          case contextmenu_attr {
+            Some(vattr.Event(handler:, prevent_default:, ..)) -> {
+              let prevents_default = case prevent_default {
+                vattr.Always(..) -> True
+                _ -> False
+              }
+
+              prevents_default
+              |> expect.to_equal(expected: True)
+
+              let open_result = decode.run(dynamic.nil(), handler)
+
+              let open_message = case open_result {
+                Ok(vattr.Handler(message:, ..)) -> message
+                Error(_) -> False
+              }
+
+              open_message
+              |> expect.to_equal(expected: True)
+            }
+            _ -> False |> expect.to_equal(expected: True)
+          }
+        }),
         it("context_menu_item renders role=menuitem", fn() {
           let view =
             headless_context_menu.context_menu_item(
