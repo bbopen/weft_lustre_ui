@@ -35,37 +35,37 @@ pub opaque type BadgeVariant {
 }
 
 /// Default badge variant.
-pub fn badge_default() -> BadgeVariant {
+pub fn badge_default(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Default)
 }
 
 /// Secondary badge variant.
-pub fn badge_secondary() -> BadgeVariant {
+pub fn badge_secondary(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Secondary)
 }
 
 /// Destructive badge variant.
-pub fn badge_destructive() -> BadgeVariant {
+pub fn badge_destructive(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Destructive)
 }
 
 /// Outline badge variant.
-pub fn badge_outline() -> BadgeVariant {
+pub fn badge_outline(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Outline)
 }
 
 /// Ghost badge variant.
-pub fn badge_ghost() -> BadgeVariant {
+pub fn badge_ghost(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Ghost)
 }
 
 /// Link-like badge variant.
-pub fn badge_link() -> BadgeVariant {
+pub fn badge_link(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Link)
 }
 
 /// Compact numeric count badge variant — minimal pill for short numbers.
-pub fn badge_count() -> BadgeVariant {
+pub fn badge_count(theme _theme: theme.Theme) -> BadgeVariant {
   BadgeVariant(value: Count)
 }
 
@@ -75,12 +75,13 @@ pub opaque type BadgeConfig(msg) {
 }
 
 /// Construct a default badge configuration.
-pub fn badge_config() -> BadgeConfig(msg) {
-  BadgeConfig(variant: badge_default(), attrs: [])
+pub fn badge_config(theme theme: theme.Theme) -> BadgeConfig(msg) {
+  BadgeConfig(variant: badge_default(theme: theme), attrs: [])
 }
 
 /// Set the badge visual variant.
 pub fn badge_variant(
+  theme _theme: theme.Theme,
   config config: BadgeConfig(msg),
   variant variant: BadgeVariant,
 ) -> BadgeConfig(msg) {
@@ -89,6 +90,7 @@ pub fn badge_variant(
 
 /// Append additional attributes to the badge.
 pub fn badge_attrs(
+  theme _theme: theme.Theme,
   config config: BadgeConfig(msg),
   attrs attrs: List(weft_lustre.Attribute(msg)),
 ) -> BadgeConfig(msg) {

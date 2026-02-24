@@ -40,7 +40,7 @@ fn view(model: Model) -> weft_lustre.Element(Msg) {
     card.card_content(theme: t, attrs: [], children: [
       button.button(
         theme: t,
-        config: button.button_config(on_press: UserClickedStart),
+        config: button.button_config(theme: t, on_press: UserClickedStart),
         label: weft_lustre.text("Get started"),
       ),
     ]),

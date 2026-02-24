@@ -1496,7 +1496,7 @@ pub fn weft_lustre_ui_tests() {
           let view =
             ui_button.button(
               theme: t,
-              config: ui_button.button_config(on_press: "press"),
+              config: ui_button.button_config(theme: t, on_press: "press"),
               label: weft_lustre.text(content: "Apply"),
             )
 
@@ -1899,8 +1899,11 @@ pub fn weft_lustre_ui_tests() {
         let view =
           ui_badge.badge(
             theme: t,
-            config: ui_badge.badge_config()
-              |> ui_badge.badge_variant(variant: ui_badge.badge_count()),
+            config: ui_badge.badge_variant(
+              theme: t,
+              config: ui_badge.badge_config(theme: t),
+              variant: ui_badge.badge_count(theme: t),
+            ),
             child: weft_lustre.text(content: "3"),
           )
 

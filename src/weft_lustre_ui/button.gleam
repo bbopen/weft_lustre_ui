@@ -87,7 +87,10 @@ pub opaque type ButtonConfig(msg) {
 }
 
 /// Construct a default `ButtonConfig`.
-pub fn button_config(on_press on_press: msg) -> ButtonConfig(msg) {
+pub fn button_config(
+  theme _theme: theme.Theme,
+  on_press on_press: msg,
+) -> ButtonConfig(msg) {
   ButtonConfig(
     on_press: on_press,
     disabled: False,
@@ -98,7 +101,10 @@ pub fn button_config(on_press on_press: msg) -> ButtonConfig(msg) {
 }
 
 /// Disable a button.
-pub fn button_disabled(config config: ButtonConfig(msg)) -> ButtonConfig(msg) {
+pub fn button_disabled(
+  theme _theme: theme.Theme,
+  config config: ButtonConfig(msg),
+) -> ButtonConfig(msg) {
   ButtonConfig(..config, disabled: True)
 }
 
@@ -122,6 +128,7 @@ pub fn button_size(
 ///
 /// Attributes are appended, so later attributes can override earlier ones.
 pub fn button_attrs(
+  theme _theme: theme.Theme,
   config config: ButtonConfig(msg),
   attrs attrs: List(weft_lustre.Attribute(msg)),
 ) -> ButtonConfig(msg) {
