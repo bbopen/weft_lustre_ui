@@ -1,6 +1,6 @@
 # weft_lustre_ui
 
-A 51-component UI library for [Lustre](https://hexdocs.pm/lustre/), modeled after
+A UI library for [Lustre](https://hexdocs.pm/lustre/), modeled after
 [shadcn/ui](https://ui.shadcn.com/). Every component comes in two tiers: a headless
 version (semantic HTML + ARIA, zero styling) and a styled version (theme-token-driven
 visuals).
@@ -52,12 +52,14 @@ fn view(model: Model) -> weft_lustre.Element(Msg) {
 
 ### Layout
 
-accordion, aspect-ratio, card, collapsible, scroll-area, separator, skeleton
+accordion, aspect-ratio, card, collapsible, resizable, scroll-area, separator,
+skeleton
 
 ### Forms
 
-button, checkbox, combobox, field, input, input-group, label, native-select,
-radio, radio-group, select, slider, switch, toggle, toggle-group
+button, checkbox, combobox, field, form, forms, input, input-group, input-otp,
+label, native-select, radio, radio-group, select, slider, switch, textarea,
+toggle, toggle-group
 
 ### Feedback
 
@@ -70,11 +72,12 @@ sheet, tooltip
 
 ### Navigation
 
-breadcrumb, link, pagination, sidebar, tabs
+breadcrumb, direction, link, menubar, navigation-menu, pagination, sidebar,
+tabs
 
 ### Data display
 
-avatar, calendar, kbd, table
+avatar, calendar, carousel, item, kbd, table
 
 ### Grouping
 
@@ -122,7 +125,8 @@ focus ring, scrim, spacing, border radius, disabled opacity, and font adjustment
 - [weft_lustre](https://github.com/bbopen/weft_lustre) -- Lustre rendering for weft
 - [lustre](https://hexdocs.pm/lustre/) -- the Gleam UI framework
 
-For charts, see the companion package [weft_chart](https://github.com/bbopen/weft_chart).
+For charts, use the companion package
+[weft_chart](https://github.com/bbopen/weft_chart).
 
 ## License
 
