@@ -1,0 +1,54 @@
+[stack]
+publish_order = ["weft", "weft_lustre", "weft_chart", "weft_lustre_ui", "module_contracts"]
+
+[packages.weft]
+local_dir = "weft"
+repo_name = "weft"
+package_name = "weft"
+hex_package = "weft"
+git_url = "https://github.com/bbopen/weft"
+version = ">= 0.1.0 and < 1.0.0"
+required_hex = []
+
+[packages.weft_lustre]
+local_dir = "weft_lustre"
+repo_name = "weft_lustre"
+package_name = "weft_lustre"
+hex_package = "weft_lustre"
+git_url = "https://github.com/bbopen/weft_lustre"
+version = ">= 0.1.0 and < 1.0.0"
+required_hex = [
+  "weft|>= 0.1.0 and < 1.0.0",
+  "plinth|>= 0.9.3 and < 1.0.0",
+]
+
+[packages.weft_chart]
+local_dir = "weft_chart"
+repo_name = "weft_chart"
+package_name = "weft_chart"
+hex_package = "weft_chart"
+git_url = "https://github.com/bbopen/weft_chart"
+version = ">= 0.2.0 and < 1.0.0"
+required_hex = ["weft|>= 0.1.0 and < 1.0.0"]
+
+[packages.weft_lustre_ui]
+local_dir = "weft_lustre_ui"
+repo_name = "weft_lustre_ui"
+package_name = "weft_lustre_ui"
+hex_package = "weft_lustre_ui"
+git_url = "https://github.com/bbopen/weft_lustre_ui"
+version = ">= 0.1.0 and < 1.0.0"
+required_hex = [
+  "weft|>= 0.1.0 and < 1.0.0",
+  "weft_lustre|>= 0.1.0 and < 1.0.0",
+]
+
+[packages.module_contracts]
+local_dir = "gleam_contracts"
+repo_name = "module_contracts"
+package_name = "module_contracts"
+hex_package = "module_contracts"
+git_url = "https://github.com/bbopen/module_contracts"
+version = ">= 0.1.0 and < 1.0.0"
+required_hex = []
+migration_aliases = ["gleam_contracts"]
