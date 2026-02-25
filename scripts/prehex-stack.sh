@@ -46,6 +46,53 @@ version_for_repo() {
   esac
 }
 
+required_hex_dependencies_for_repo() {
+  case "$1" in
+    weft) ;;
+    weft_lustre)
+      printf '%s\n' \
+        'weft|>= 0.1.0 and < 1.0.0' \
+        'plinth|>= 0.9.0 and < 1.0.0'
+      ;;
+    weft_chart)
+      printf '%s\n' \
+        'weft|>= 0.1.0 and < 1.0.0'
+      ;;
+    weft_lustre_ui)
+      printf '%s\n' \
+        'weft|>= 0.1.0 and < 1.0.0' \
+        'weft_lustre|>= 0.1.0 and < 1.0.0'
+      ;;
+    gleam_contracts) ;;
+    *) fail "unknown repo: $1" ;;
+  esac
+}
+
+hex_package_exists() {
+  local package="$1"
+  local status
+  status="$(curl -s -o /dev/null -w '%{http_code}' "https://hex.pm/api/packages/$package")"
+  [[ "$status" == "200" ]]
+}
+
+run_hex_dependency_gate() {
+  local repo="$1"
+  local requirements
+  requirements="$(required_hex_dependencies_for_repo "$repo")"
+
+  [[ -n "$requirements" ]] || return 0
+
+  say "== hex dependency gate: $repo =="
+
+  while IFS='|' read -r package constraint; do
+    [[ -n "$package" ]] || continue
+    if ! hex_package_exists "$package"; then
+      fail "$repo requires Hex dependency '$package ($constraint)' but package is not published yet"
+    fi
+    say "OK: found Hex package '$package' for constraint '$constraint'"
+  done <<< "$requirements"
+}
+
 run_repo_checks() {
   local repo="$1"
   local repo_dir="$STACK_ROOT/$repo"
@@ -145,6 +192,10 @@ EOF
 }
 
 main() {
+  for repo in "${REPOS[@]}"; do
+    run_hex_dependency_gate "$repo"
+  done
+
   for repo in "${REPOS[@]}"; do
     run_repo_checks "$repo"
   done
