@@ -16,7 +16,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 INTERFACE_JSON="build/dev/docs/${PWD##*/}/package-interface.json"
-ALLOW_SKIP="${WEFT_LUSTRE_UI_ALLOW_CONTRACT_SKIP:-0}"
+SKIP_CONTRACTS="${WEFT_LUSTRE_UI_SKIP_CONTRACTS:-${WEFT_LUSTRE_UI_ALLOW_CONTRACT_SKIP:-0}}"
 
 say() { printf '%s\n' "$*" >&2; }
 fail() {
@@ -25,20 +25,20 @@ fail() {
 }
 
 if ! command -v python3 >/dev/null 2>&1; then
-  if [[ "$ALLOW_SKIP" == "1" ]]; then
+  if [[ "$SKIP_CONTRACTS" == "1" ]]; then
     say "SKIP: python3 not found — contract verification requires Python 3"
     exit 0
   fi
-  fail "python3 not found — set WEFT_LUSTRE_UI_ALLOW_CONTRACT_SKIP=1 to bypass locally"
+  fail "python3 not found — set WEFT_LUSTRE_UI_SKIP_CONTRACTS=1 (or WEFT_LUSTRE_UI_ALLOW_CONTRACT_SKIP=1) to bypass locally"
 fi
 
 # Export package interface (requires a successful build first)
 gleam export package-interface --out "$INTERFACE_JSON" >/dev/null 2>&1 || {
-  if [[ "$ALLOW_SKIP" == "1" ]]; then
+  if [[ "$SKIP_CONTRACTS" == "1" ]]; then
     say "SKIP: gleam export package-interface failed — run gleam build first"
     exit 0
   fi
-  fail "gleam export package-interface failed — run gleam build first (or set WEFT_LUSTRE_UI_ALLOW_CONTRACT_SKIP=1 locally)"
+  fail "gleam export package-interface failed — run gleam build first (or set WEFT_LUSTRE_UI_SKIP_CONTRACTS=1 locally)"
 }
 
 python3 scripts/check-contracts.py "$INTERFACE_JSON"

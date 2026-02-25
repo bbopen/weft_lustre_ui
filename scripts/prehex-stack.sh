@@ -68,11 +68,12 @@ required_hex_dependencies_for_repo() {
   esac
 }
 
-hex_package_exists() {
+hex_package_status() {
   local package="$1"
-  local status
-  status="$(curl -s -o /dev/null -w '%{http_code}' "https://hex.pm/api/packages/$package")"
-  [[ "$status" == "200" ]]
+  curl -sS --max-time 15 --retry 2 \
+    -o /dev/null \
+    -w '%{http_code}' \
+    "https://hex.pm/api/packages/$package" || true
 }
 
 run_hex_dependency_gate() {
@@ -86,10 +87,22 @@ run_hex_dependency_gate() {
 
   while IFS='|' read -r package constraint; do
     [[ -n "$package" ]] || continue
-    if ! hex_package_exists "$package"; then
-      fail "$repo requires Hex dependency '$package ($constraint)' but package is not published yet"
-    fi
-    say "OK: found Hex package '$package' for constraint '$constraint'"
+    local status
+    status="$(hex_package_status "$package")"
+    case "$status" in
+      200)
+        say "OK: found Hex package '$package' for constraint '$constraint'"
+        ;;
+      404)
+        fail "$repo requires Hex dependency '$package ($constraint)' but package is not published yet"
+        ;;
+      000)
+        fail "$repo could not verify Hex dependency '$package ($constraint)' due to network/timeout"
+        ;;
+      *)
+        fail "$repo could not verify Hex dependency '$package ($constraint)' (unexpected status: $status)"
+        ;;
+    esac
   done <<< "$requirements"
 }
 
@@ -154,6 +167,8 @@ run_consumer_smoke() {
 
   local tmp_dir
   tmp_dir="$(mktemp -d)"
+  cleanup_smoke_tmp() { rm -rf "$tmp_dir"; }
+  trap cleanup_smoke_tmp RETURN
 
   pushd "$tmp_dir" >/dev/null
   gleam new smoke_app >/dev/null 2>&1
@@ -186,6 +201,7 @@ EOF
 
   say "== smoke ($mode): $package_name =="
   gleam deps download
+  # JavaScript-only smoke is intentional for release-speed checks.
   gleam build --target javascript
 
   popd >/dev/null
