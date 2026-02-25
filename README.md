@@ -7,15 +7,22 @@ visuals).
 
 ## Installation
 
-weft_lustre_ui isn't on Hex yet. Use a git dependency:
+Before the first Hex release, use local path dependencies from a checked-out
+stack:
 
 ```toml
 [dependencies]
-weft_lustre_ui = { git = "https://github.com/bbopen/weft_lustre_ui", branch = "main" }
+weft = { path = "../weft" }
+weft_lustre = { path = "../weft_lustre" }
+weft_lustre_ui = { path = "../weft_lustre_ui" }
 ```
 
-You'll also need [weft](https://github.com/bbopen/weft) and
-[weft_lustre](https://github.com/bbopen/weft_lustre) as dependencies.
+After Hex publish, install with:
+
+```toml
+[dependencies]
+weft_lustre_ui = ">= 0.1.0 and < 1.0.0"
+```
 
 ## Quick start
 
