@@ -9,48 +9,52 @@ import weft_lustre_ui/theme
 
 pub fn carousel_tests() {
   describe("carousel", [
-    describe("headless config mutators", [
-      it(
-        "orientation helpers round-trip across root/content/item configs",
-        fn() {
-          let vertical = headless_carousel.carousel_vertical()
+    describe("headless behavior", [
+      it("vertical orientation is reflected on root/content/item", fn() {
+        let vertical = headless_carousel.carousel_vertical()
 
-          let root_config =
-            headless_carousel.carousel_config()
-            |> headless_carousel.carousel_orientation(orientation: vertical)
-          let content_config =
-            headless_carousel.carousel_content_config()
-            |> headless_carousel.carousel_content_orientation(
-              orientation: vertical,
-            )
-          let item_config =
-            headless_carousel.carousel_item_config()
-            |> headless_carousel.carousel_item_orientation(
-              orientation: vertical,
-            )
-
-          headless_carousel.carousel_orientation_is_vertical(
-            orientation: headless_carousel.carousel_config_orientation(
-              config: root_config,
-            ),
+        let view =
+          headless_carousel.carousel(
+            config: headless_carousel.carousel_config()
+              |> headless_carousel.carousel_orientation(orientation: vertical),
+            children: [
+              headless_carousel.carousel_content(
+                config: headless_carousel.carousel_content_config()
+                  |> headless_carousel.carousel_content_orientation(
+                    orientation: vertical,
+                  ),
+                children: [
+                  headless_carousel.carousel_item(
+                    config: headless_carousel.carousel_item_config()
+                      |> headless_carousel.carousel_item_orientation(
+                        orientation: vertical,
+                      ),
+                    child: weft_lustre.text(content: "Slide 1"),
+                  ),
+                ],
+              ),
+            ],
           )
-          |> expect.to_equal(expected: True)
 
-          headless_carousel.carousel_orientation_is_vertical(
-            orientation: headless_carousel.carousel_content_config_orientation(
-              config: content_config,
-            ),
-          )
-          |> expect.to_equal(expected: True)
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
 
-          headless_carousel.carousel_orientation_is_vertical(
-            orientation: headless_carousel.carousel_item_config_orientation(
-              config: item_config,
-            ),
+        string.contains(rendered, "data-orientation=\"vertical\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("disabled control renders disabled attribute", fn() {
+        let rendered =
+          headless_carousel.carousel_previous(
+            config: headless_carousel.carousel_control_config()
+            |> headless_carousel.carousel_control_disabled(),
           )
-          |> expect.to_equal(expected: True)
-        },
-      ),
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
+
+        string.contains(rendered, "disabled=\"\"")
+        |> expect.to_equal(expected: True)
+      }),
     ]),
     describe("headless rendering", [
       it("renders carousel root/content/item/control slots", fn() {
@@ -86,61 +90,62 @@ pub fn carousel_tests() {
         string.contains(rendered, "data-slot=\"carousel-item\"")
         |> expect.to_equal(expected: True)
 
+        string.contains(rendered, "data-slot=\"carousel-content\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-previous\"")
+        |> expect.to_equal(expected: True)
+
         string.contains(rendered, "data-slot=\"carousel-next\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
-    describe("styled config mutators", [
-      it(
-        "orientation helpers round-trip across root/content/item configs",
-        fn() {
-          let t = theme.theme_default()
-          let vertical = ui_carousel.carousel_vertical(theme: t)
+    describe("styled behavior", [
+      it("styled vertical orientation is reflected in rendered markup", fn() {
+        let t = theme.theme_default()
+        let vertical = ui_carousel.carousel_vertical(theme: t)
 
-          let root_config =
-            ui_carousel.carousel_config(theme: t)
-            |> ui_carousel.carousel_orientation(theme: t, orientation: vertical)
-          let content_config =
-            ui_carousel.carousel_content_config(theme: t)
-            |> ui_carousel.carousel_content_orientation(
-              theme: t,
-              orientation: vertical,
-            )
-          let item_config =
-            ui_carousel.carousel_item_config(theme: t)
-            |> ui_carousel.carousel_item_orientation(
-              theme: t,
-              orientation: vertical,
-            )
-
-          ui_carousel.carousel_orientation_is_vertical(
+        let view =
+          ui_carousel.carousel(
             theme: t,
-            orientation: ui_carousel.carousel_config_orientation(
-              theme: t,
-              config: root_config,
-            ),
+            config: ui_carousel.carousel_config(theme: t)
+              |> ui_carousel.carousel_orientation(
+                theme: t,
+                orientation: vertical,
+              ),
+            children: [
+              ui_carousel.carousel_content(
+                theme: t,
+                config: ui_carousel.carousel_content_config(theme: t)
+                  |> ui_carousel.carousel_content_orientation(
+                    theme: t,
+                    orientation: vertical,
+                  ),
+                children: [
+                  ui_carousel.carousel_item(
+                    theme: t,
+                    config: ui_carousel.carousel_item_config(theme: t)
+                      |> ui_carousel.carousel_item_orientation(
+                        theme: t,
+                        orientation: vertical,
+                      ),
+                    child: weft_lustre.text(content: "Slide 1"),
+                  ),
+                ],
+              ),
+            ],
           )
-          |> expect.to_equal(expected: True)
 
-          ui_carousel.carousel_orientation_is_vertical(
-            theme: t,
-            orientation: ui_carousel.carousel_content_config_orientation(
-              theme: t,
-              config: content_config,
-            ),
-          )
-          |> expect.to_equal(expected: True)
+        let rendered =
+          weft_lustre.layout(attrs: [], child: view)
+          |> element.to_string
 
-          ui_carousel.carousel_orientation_is_vertical(
-            theme: t,
-            orientation: ui_carousel.carousel_item_config_orientation(
-              theme: t,
-              config: item_config,
-            ),
-          )
-          |> expect.to_equal(expected: True)
-        },
-      ),
+        string.contains(rendered, "data-orientation=\"vertical\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-orientation=\"horizontal\"")
+        |> expect.to_equal(expected: False)
+      }),
     ]),
     describe("styled rendering", [
       it("renders carousel root/content/item/control slots", fn() {
@@ -177,6 +182,12 @@ pub fn carousel_tests() {
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"carousel-item\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-content\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-previous\"")
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"carousel-next\"")

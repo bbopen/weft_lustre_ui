@@ -9,21 +9,38 @@ import weft_lustre_ui/theme
 
 pub fn navigation_menu_tests() {
   describe("navigation_menu", [
-    describe("headless config mutators", [
-      it("viewport-enabled flag round-trips through config helpers", fn() {
+    describe("headless behavior", [
+      it("disabling viewport removes viewport slot and updates data flag", fn() {
         let config =
           headless_navigation_menu.navigation_menu_config()
           |> headless_navigation_menu.navigation_menu_viewport_enabled(
             enabled: False,
           )
 
-        headless_navigation_menu.navigation_menu_config_viewport_enabled(
-          config: config,
-        )
+        let rendered =
+          headless_navigation_menu.navigation_menu(config: config, children: [])
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
+
+        string.contains(rendered, "data-viewport=\"false\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"navigation-menu-viewport\"")
         |> expect.to_equal(expected: False)
       }),
-      it("trigger style helper remains available", fn() {
-        { headless_navigation_menu.navigation_menu_trigger_style() != [] }
+      it("default config renders viewport and marks data-viewport true", fn() {
+        let rendered =
+          headless_navigation_menu.navigation_menu(
+            config: headless_navigation_menu.navigation_menu_config(),
+            children: [],
+          )
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
+
+        string.contains(rendered, "data-viewport=\"true\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"navigation-menu-viewport\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
@@ -65,12 +82,12 @@ pub fn navigation_menu_tests() {
         string.contains(rendered, "data-slot=\"navigation-menu-trigger\"")
         |> expect.to_equal(expected: True)
 
-        string.contains(rendered, "data-slot=\"navigation-menu-viewport\"")
+        string.contains(rendered, "type=\"button\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
-    describe("styled config mutators", [
-      it("viewport-enabled flag round-trips through config helpers", fn() {
+    describe("styled behavior", [
+      it("styled config respects viewport enabled false", fn() {
         let t = theme.theme_default()
         let config =
           ui_navigation_menu.navigation_menu_config(theme: t)
@@ -79,17 +96,20 @@ pub fn navigation_menu_tests() {
             enabled: False,
           )
 
-        ui_navigation_menu.navigation_menu_config_viewport_enabled(
-          theme: t,
-          config: config,
-        )
-        |> expect.to_equal(expected: False)
-      }),
-      it("trigger style helper remains available", fn() {
-        let t = theme.theme_default()
+        let rendered =
+          ui_navigation_menu.navigation_menu(
+            theme: t,
+            config: config,
+            children: [],
+          )
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
 
-        { ui_navigation_menu.navigation_menu_trigger_style(theme: t) != [] }
+        string.contains(rendered, "data-viewport=\"false\"")
         |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"navigation-menu-viewport\"")
+        |> expect.to_equal(expected: False)
       }),
     ]),
     describe("styled rendering", [
@@ -140,7 +160,7 @@ pub fn navigation_menu_tests() {
         string.contains(rendered, "data-slot=\"navigation-menu\"")
         |> expect.to_equal(expected: True)
 
-        string.contains(rendered, "data-slot=\"navigation-menu-trigger\"")
+        string.contains(rendered, "data-slot=\"navigation-menu-link\"")
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"navigation-menu-viewport\"")

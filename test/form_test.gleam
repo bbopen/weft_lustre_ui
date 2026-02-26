@@ -33,6 +33,9 @@ pub fn form_tests() {
 
         rendered_form
         |> expect.to_equal(expected: rendered_forms)
+
+        string.contains(rendered_form, "<form")
+        |> expect.to_equal(expected: True)
       }),
     ]),
     describe("styled form facade", [
@@ -64,19 +67,8 @@ pub fn form_tests() {
 
         rendered_form
         |> expect.to_equal(expected: rendered_forms)
-      }),
-      it("styled form root renders semantic form container", fn() {
-        let t = theme.theme_default()
-        let rendered =
-          ui_form.form(
-            theme: t,
-            config: ui_form.form_config(theme: t),
-            children: [weft_lustre.text(content: "body")],
-          )
-          |> weft_lustre.layout(attrs: [])
-          |> element.to_string
 
-        string.contains(rendered, "<form")
+        string.contains(rendered_form, "id=\"name\"")
         |> expect.to_equal(expected: True)
       }),
       it("headless form helper wiring remains available", fn() {
@@ -92,6 +84,9 @@ pub fn form_tests() {
           |> element.to_string
 
         string.contains(rendered, "<textarea")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "id=\"bio\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
