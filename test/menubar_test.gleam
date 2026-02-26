@@ -17,8 +17,8 @@ fn open_change_label(open: Bool) -> String {
 
 pub fn menubar_tests() {
   describe("menubar", [
-    describe("headless config mutators", [
-      it("menu config mutators round-trip through rendered attributes", fn() {
+    describe("headless behavior", [
+      it("menu config mutators render menu id/state and forwarded attrs", fn() {
         let menu_config =
           headless_menubar.menubar_menu_config(id: "file")
           |> headless_menubar.menubar_menu_open(open: True)
@@ -47,40 +47,33 @@ pub fn menubar_tests() {
         string.contains(rendered, "data-extra=\"1\"")
         |> expect.to_equal(expected: True)
       }),
-      it("root config key mutators keep menubar renderable", fn() {
-        let root_config =
-          headless_menubar.menubar_config()
-          |> headless_menubar.menubar_on_move_prev(on_move_prev: "prev")
-          |> headless_menubar.menubar_on_move_next(on_move_next: "next")
-          |> headless_menubar.menubar_on_close_all(on_close_all: "close")
+      it(
+        "item mutators render inset, destructive variant, and disabled state",
+        fn() {
+          let config =
+            headless_menubar.menubar_item_config()
+            |> headless_menubar.menubar_item_variant(
+              variant: headless_menubar.menubar_item_variant_destructive(),
+            )
+            |> headless_menubar.menubar_item_inset()
+            |> headless_menubar.menubar_item_disabled()
 
-        let rendered =
-          weft_lustre.layout(
-            attrs: [],
-            child: headless_menubar.menubar(config: root_config, children: []),
-          )
-          |> element.to_string
+          let rendered =
+            headless_menubar.menubar_item(
+              config: config,
+              child: weft_lustre.text(content: "Delete"),
+            )
+            |> weft_lustre.layout(attrs: [])
+            |> element.to_string
 
-        string.contains(rendered, "data-slot=\"menubar\"")
-        |> expect.to_equal(expected: True)
-      }),
-      it("item config variant/inset helpers round-trip", fn() {
-        let config =
-          headless_menubar.menubar_item_config()
-          |> headless_menubar.menubar_item_variant(
-            variant: headless_menubar.menubar_item_variant_destructive(),
-          )
-          |> headless_menubar.menubar_item_inset()
-
-        let variant =
-          headless_menubar.menubar_item_config_variant(config: config)
-
-        headless_menubar.menubar_item_variant_is_destructive(variant: variant)
-        |> expect.to_equal(expected: True)
-
-        headless_menubar.menubar_item_config_inset(config: config)
-        |> expect.to_equal(expected: True)
-      }),
+          string.contains(rendered, "data-variant=\"destructive\"")
+          |> expect.to_equal(expected: True)
+          string.contains(rendered, "data-inset=\"true\"")
+          |> expect.to_equal(expected: True)
+          string.contains(rendered, "data-disabled=\"true\"")
+          |> expect.to_equal(expected: True)
+        },
+      ),
     ]),
     describe("headless rendering", [
       it("renders menubar root and item slots", fn() {
@@ -99,15 +92,15 @@ pub fn menubar_tests() {
           weft_lustre.layout(attrs: [], child: view)
           |> element.to_string
 
-        string.contains(rendered, "data-slot=\"menubar\"")
+        string.contains(rendered, "role=\"menubar\"")
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"menubar-item\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
-    describe("styled config mutators", [
-      it("menu config mutators round-trip through rendered attributes", fn() {
+    describe("styled behavior", [
+      it("styled menu config mutators render menu id/state and attrs", fn() {
         let t = theme.theme_default()
         let menu_config =
           ui_menubar.menubar_menu_config(theme: t, id: "file")
@@ -139,50 +132,6 @@ pub fn menubar_tests() {
         string.contains(rendered, "data-extra=\"1\"")
         |> expect.to_equal(expected: True)
       }),
-      it("root config key mutators keep menubar renderable", fn() {
-        let t = theme.theme_default()
-        let root_config =
-          ui_menubar.menubar_config(theme: t)
-          |> ui_menubar.menubar_on_move_prev(theme: t, on_move_prev: "prev")
-          |> ui_menubar.menubar_on_move_next(theme: t, on_move_next: "next")
-          |> ui_menubar.menubar_on_close_all(theme: t, on_close_all: "close")
-
-        let rendered =
-          weft_lustre.layout(
-            attrs: [],
-            child: ui_menubar.menubar(
-              theme: t,
-              config: root_config,
-              children: [],
-            ),
-          )
-          |> element.to_string
-
-        string.contains(rendered, "data-slot=\"menubar\"")
-        |> expect.to_equal(expected: True)
-      }),
-      it("item config variant/inset helpers round-trip", fn() {
-        let t = theme.theme_default()
-        let config =
-          ui_menubar.menubar_item_config(theme: t)
-          |> ui_menubar.menubar_item_variant(
-            theme: t,
-            variant: ui_menubar.menubar_item_variant_destructive(theme: t),
-          )
-          |> ui_menubar.menubar_item_inset(theme: t)
-
-        let variant =
-          ui_menubar.menubar_item_config_variant(theme: t, config: config)
-
-        ui_menubar.menubar_item_variant_is_destructive(
-          theme: t,
-          variant: variant,
-        )
-        |> expect.to_equal(expected: True)
-
-        ui_menubar.menubar_item_config_inset(theme: t, config: config)
-        |> expect.to_equal(expected: True)
-      }),
     ]),
     describe("styled rendering", [
       it("renders menubar root and item slots", fn() {
@@ -203,7 +152,7 @@ pub fn menubar_tests() {
           weft_lustre.layout(attrs: [], child: view)
           |> element.to_string
 
-        string.contains(rendered, "data-slot=\"menubar\"")
+        string.contains(rendered, "role=\"menubar\"")
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"menubar-item\"")

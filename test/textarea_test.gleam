@@ -17,12 +17,16 @@ pub fn textarea_tests() {
           headless_input.textarea_config(value: "Hello", on_input: fn(_value) {
             "changed"
           })
+          |> headless_input.textarea_rows(rows: 4)
+          |> headless_input.textarea_placeholder(value: "Tell us")
 
         let cfg_facade =
           headless_textarea.textarea_config(
             value: "Hello",
             on_input: fn(_value) { "changed" },
           )
+          |> headless_textarea.textarea_rows(rows: 4)
+          |> headless_textarea.textarea_placeholder(value: "Tell us")
 
         let rendered_input =
           headless_input.textarea(config: cfg_input)
@@ -36,6 +40,11 @@ pub fn textarea_tests() {
 
         rendered_facade
         |> expect.to_equal(expected: rendered_input)
+
+        string.contains(rendered_facade, "rows=\"4\"")
+        |> expect.to_equal(expected: True)
+        string.contains(rendered_facade, "placeholder=\"Tell us\"")
+        |> expect.to_equal(expected: True)
       }),
     ]),
     describe("styled textarea facade", [
@@ -49,12 +58,14 @@ pub fn textarea_tests() {
             on_input: fn(_value) { "changed" },
           )
           |> ui_textarea.textarea_rows(theme: t, rows: 5)
+          |> ui_textarea.textarea_disabled(theme: t)
 
         let cfg_input =
           ui_input.textarea_config(value: "Hello", on_input: fn(_value) {
             "changed"
           })
           |> ui_input.textarea_rows(rows: 5)
+          |> ui_input.textarea_disabled()
 
         let rendered_facade =
           ui_textarea.textarea(theme: t, config: cfg_facade)
@@ -70,6 +81,9 @@ pub fn textarea_tests() {
         |> expect.to_equal(expected: rendered_input)
 
         string.contains(rendered_facade, "rows=\"5\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered_facade, "disabled")
         |> expect.to_equal(expected: True)
       }),
     ]),

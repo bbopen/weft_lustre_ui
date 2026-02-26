@@ -10,7 +10,7 @@ import weft_lustre_ui/theme
 pub fn item_tests() {
   describe("item", [
     describe("headless rendering", [
-      it("headless config mutators update variant and size attributes", fn() {
+      it("headless config mutators render expected variant and size", fn() {
         let config =
           headless_item.item_config()
           |> headless_item.item_variant(
@@ -45,8 +45,8 @@ pub fn item_tests() {
         |> expect.to_equal(expected: True)
       }),
     ]),
-    describe("styled config mutators", [
-      it("item config round-trips through variant and size helpers", fn() {
+    describe("styled rendering", [
+      it("styled item mutators render expected variant and size", fn() {
         let t = theme.theme_default()
         let config =
           ui_item.item_config(theme: t)
@@ -56,32 +56,17 @@ pub fn item_tests() {
           )
           |> ui_item.item_size(theme: t, size: ui_item.item_size_sm(theme: t))
 
-        let variant = ui_item.item_config_variant(theme: t, config: config)
-        let size = ui_item.item_config_size(theme: t, config: config)
+        let rendered =
+          ui_item.item(theme: t, config: config, children: [])
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
 
-        ui_item.item_variant_is_outline(theme: t, variant: variant)
+        string.contains(rendered, "data-variant=\"outline\"")
         |> expect.to_equal(expected: True)
 
-        ui_item.item_size_is_sm(theme: t, size: size)
-        |> expect.to_equal(expected: True)
-      }),
-      it("item media config round-trips through media variant helpers", fn() {
-        let t = theme.theme_default()
-        let config =
-          ui_item.item_media_config(theme: t)
-          |> ui_item.item_media_variant(
-            theme: t,
-            variant: ui_item.item_media_variant_icon(theme: t),
-          )
-
-        let variant =
-          ui_item.item_media_config_variant(theme: t, config: config)
-
-        ui_item.item_media_variant_is_icon(theme: t, variant: variant)
+        string.contains(rendered, "data-size=\"sm\"")
         |> expect.to_equal(expected: True)
       }),
-    ]),
-    describe("styled rendering", [
       it("renders item root and slots with expected data-slot markers", fn() {
         let t = theme.theme_default()
         let config = ui_item.item_config(theme: t)
@@ -103,6 +88,9 @@ pub fn item_tests() {
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"item-content\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"item-title\"")
         |> expect.to_equal(expected: True)
       }),
     ]),

@@ -9,8 +9,8 @@ import weft_lustre_ui/theme
 
 pub fn input_otp_tests() {
   describe("input_otp", [
-    describe("headless config mutators", [
-      it("input_otp config mutators affect rendered slot structure", fn() {
+    describe("headless behavior", [
+      it("length and disabled mutators affect rendered slots", fn() {
         let config =
           headless_input_otp.input_otp_config(
             value: "12",
@@ -29,6 +29,9 @@ pub fn input_otp_tests() {
 
         string.contains(rendered, "data-index=\"3\"")
         |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-index=\"4\"")
+        |> expect.to_equal(expected: False)
       }),
     ]),
     describe("headless rendering", [
@@ -59,8 +62,8 @@ pub fn input_otp_tests() {
         |> expect.to_equal(expected: True)
       }),
     ]),
-    describe("styled config mutators", [
-      it("input_otp config mutators affect rendered slot structure", fn() {
+    describe("styled behavior", [
+      it("length and disabled mutators affect styled rendered slots", fn() {
         let t = theme.theme_default()
         let config =
           ui_input_otp.input_otp_config(
@@ -81,6 +84,9 @@ pub fn input_otp_tests() {
 
         string.contains(rendered, "data-index=\"3\"")
         |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-index=\"4\"")
+        |> expect.to_equal(expected: False)
       }),
     ]),
     describe("styled rendering", [

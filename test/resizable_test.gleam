@@ -9,35 +9,8 @@ import weft_lustre_ui/theme
 
 pub fn resizable_tests() {
   describe("resizable", [
-    describe("headless config mutators", [
-      it("panel group orientation helpers round-trip", fn() {
-        let vertical = headless_resizable.resizable_vertical()
-
-        let group_config =
-          headless_resizable.resizable_panel_group_config()
-          |> headless_resizable.resizable_panel_group_orientation(
-            orientation: vertical,
-          )
-
-        let orientation =
-          headless_resizable.resizable_panel_group_config_orientation(
-            config: group_config,
-          )
-
-        headless_resizable.resizable_orientation_is_vertical(
-          orientation: orientation,
-        )
-        |> expect.to_equal(expected: True)
-      }),
-      it("handle config exposes grip-affordance state", fn() {
-        let config =
-          headless_resizable.resizable_handle_config()
-          |> headless_resizable.resizable_handle_with_handle()
-
-        headless_resizable.resizable_handle_config_with_handle(config: config)
-        |> expect.to_equal(expected: True)
-      }),
-      it("handle orientation can be derived from panel group orientation", fn() {
+    describe("headless behavior", [
+      it("vertical panel group drives horizontal handle orientation", fn() {
         let group_config =
           headless_resizable.resizable_panel_group_config()
           |> headless_resizable.resizable_panel_group_orientation(
@@ -50,20 +23,34 @@ pub fn resizable_tests() {
             group_config: group_config,
           )
 
-        let orientation =
-          headless_resizable.resizable_handle_config_orientation(
-            config: handle_config,
-          )
+        let rendered =
+          headless_resizable.resizable_handle(config: handle_config)
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
 
-        headless_resizable.resizable_orientation_is_horizontal(
-          orientation: orientation,
-        )
+        string.contains(rendered, "aria-orientation=\"horizontal\"")
+        |> expect.to_equal(expected: True)
+      }),
+      it("horizontal panel group renders horizontal aria-orientation", fn() {
+        let rendered =
+          headless_resizable.resizable_panel_group(
+            config: headless_resizable.resizable_panel_group_config(),
+            children: [],
+          )
+          |> weft_lustre.layout(attrs: [])
+          |> element.to_string
+
+        string.contains(rendered, "aria-orientation=\"horizontal\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
     describe("headless rendering", [
       it("renders panel group/panel/handle slots", fn() {
-        let group_config = headless_resizable.resizable_panel_group_config()
+        let group_config =
+          headless_resizable.resizable_panel_group_config()
+          |> headless_resizable.resizable_panel_group_orientation(
+            orientation: headless_resizable.resizable_vertical(),
+          )
         let handle_config =
           headless_resizable.resizable_handle_config()
           |> headless_resizable.resizable_handle_with_handle()
@@ -93,43 +80,37 @@ pub fn resizable_tests() {
         |> expect.to_equal(expected: True)
       }),
     ]),
-    describe("styled config mutators", [
-      it("panel group orientation helpers round-trip", fn() {
-        let t = theme.theme_default()
-        let vertical = ui_resizable.resizable_vertical(theme: t)
+    describe("styled behavior", [
+      it(
+        "styled vertical panel group drives horizontal handle orientation",
+        fn() {
+          let t = theme.theme_default()
+          let group_config =
+            ui_resizable.resizable_panel_group_config(theme: t)
+            |> ui_resizable.resizable_panel_group_orientation(
+              theme: t,
+              orientation: ui_resizable.resizable_vertical(theme: t),
+            )
 
-        let group_config =
-          ui_resizable.resizable_panel_group_config(theme: t)
-          |> ui_resizable.resizable_panel_group_orientation(
-            theme: t,
-            orientation: vertical,
-          )
+          let handle_config =
+            ui_resizable.resizable_handle_config(theme: t)
+            |> ui_resizable.resizable_handle_orientation_from_group(
+              theme: t,
+              group_config: group_config,
+            )
 
-        let orientation =
-          ui_resizable.resizable_panel_group_config_orientation(
-            theme: t,
-            config: group_config,
-          )
+          let rendered =
+            ui_resizable.resizable_handle(theme: t, config: handle_config)
+            |> weft_lustre.layout(attrs: [])
+            |> element.to_string
 
-        ui_resizable.resizable_orientation_is_vertical(
-          theme: t,
-          orientation: orientation,
-        )
-        |> expect.to_equal(expected: True)
-      }),
-      it("handle config exposes grip-affordance state", fn() {
-        let t = theme.theme_default()
-        let config =
-          ui_resizable.resizable_handle_config(theme: t)
-          |> ui_resizable.resizable_handle_with_handle(theme: t)
-
-        ui_resizable.resizable_handle_config_with_handle(
-          theme: t,
-          config: config,
-        )
-        |> expect.to_equal(expected: True)
-      }),
-      it("handle orientation can be derived from panel group orientation", fn() {
+          string.contains(rendered, "aria-orientation=\"horizontal\"")
+          |> expect.to_equal(expected: True)
+        },
+      ),
+    ]),
+    describe("styled rendering", [
+      it("renders panel group/panel/handle slots", fn() {
         let t = theme.theme_default()
         let group_config =
           ui_resizable.resizable_panel_group_config(theme: t)
@@ -137,31 +118,6 @@ pub fn resizable_tests() {
             theme: t,
             orientation: ui_resizable.resizable_vertical(theme: t),
           )
-
-        let handle_config =
-          ui_resizable.resizable_handle_config(theme: t)
-          |> ui_resizable.resizable_handle_orientation_from_group(
-            theme: t,
-            group_config: group_config,
-          )
-
-        let orientation =
-          ui_resizable.resizable_handle_config_orientation(
-            theme: t,
-            config: handle_config,
-          )
-
-        ui_resizable.resizable_orientation_is_horizontal(
-          theme: t,
-          orientation: orientation,
-        )
-        |> expect.to_equal(expected: True)
-      }),
-    ]),
-    describe("styled rendering", [
-      it("renders panel group/panel/handle slots", fn() {
-        let t = theme.theme_default()
-        let group_config = ui_resizable.resizable_panel_group_config(theme: t)
         let handle_config = ui_resizable.resizable_handle_config(theme: t)
 
         let view =
