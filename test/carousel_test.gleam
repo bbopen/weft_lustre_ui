@@ -52,7 +52,7 @@ pub fn carousel_tests() {
           |> weft_lustre.layout(attrs: [])
           |> element.to_string
 
-        string.contains(rendered, "disabled")
+        string.contains(rendered, "disabled=\"\"")
         |> expect.to_equal(expected: True)
       }),
     ]),
@@ -88,6 +88,12 @@ pub fn carousel_tests() {
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"carousel-item\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-content\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-previous\"")
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"carousel-next\"")
@@ -136,6 +142,9 @@ pub fn carousel_tests() {
 
         string.contains(rendered, "data-orientation=\"vertical\"")
         |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-orientation=\"horizontal\"")
+        |> expect.to_equal(expected: False)
       }),
     ]),
     describe("styled rendering", [
@@ -173,6 +182,12 @@ pub fn carousel_tests() {
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"carousel-item\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-content\"")
+        |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "data-slot=\"carousel-previous\"")
         |> expect.to_equal(expected: True)
 
         string.contains(rendered, "data-slot=\"carousel-next\"")

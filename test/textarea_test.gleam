@@ -83,7 +83,7 @@ pub fn textarea_tests() {
         string.contains(rendered_facade, "rows=\"5\"")
         |> expect.to_equal(expected: True)
 
-        string.contains(rendered_facade, "disabled")
+        string.contains(rendered_facade, "disabled=\"\"")
         |> expect.to_equal(expected: True)
       }),
     ]),

@@ -2,6 +2,14 @@
 
 This pass focuses on tests that look like they may have been written to keep green status rather than to strongly verify behavior.
 
+
+## Current status (post-rewrite follow-up)
+
+- ✅ Addressed in tests: `navigation_menu`, `resizable`, `menubar`, `item`, `form`, `input_otp`, and `direction` now include behavior-oriented assertions that replaced the original low-signal round-trips.
+- ✅ Addressed in this follow-up: `carousel` now checks `carousel-content` and `carousel-previous` slots in both headless and styled render paths, adds a negative orientation assertion (`horizontal` absent when `vertical` is configured), and tightens disabled checks to explicit boolean attribute rendering.
+- ✅ Addressed in this follow-up: `textarea` disabled assertion is now precise (`disabled=""`) instead of a broad `"disabled"` token check.
+- 🔄 Remaining long-term improvement opportunities (not blocking this audit close-out): replace broad string assertions with attribute extraction/parsing helpers where practical.
+
 ## Heuristics used
 
 - **Self-fulfilling round-trips**: setter + getter + predicate all from same module, no independent oracle.
