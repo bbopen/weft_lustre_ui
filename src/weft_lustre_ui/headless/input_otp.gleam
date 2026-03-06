@@ -116,13 +116,6 @@ fn normalized_chars(value: String, length: Int) -> List(String) {
   }
 }
 
-fn first_grapheme_or_empty(value: String) -> String {
-  case string.to_graphemes(value) {
-    [head, ..] -> head
-    [] -> ""
-  }
-}
-
 fn replace_slot(
   chars chars: List(String),
   index index: Int,
@@ -136,6 +129,47 @@ fn replace_slot(
     }
   })
   |> string.join(with: "")
+}
+
+fn replace_slots_from_index(
+  chars chars: List(String),
+  index index: Int,
+  values values: List(String),
+) -> String {
+  chars
+  |> list.index_map(with: fn(char, i) {
+    let offset = i - index
+    case offset < 0 {
+      True -> char
+      False -> {
+        case list.at(values, offset) {
+          Ok(value) -> value
+          Error(Nil) -> char
+        }
+      }
+    }
+  })
+  |> string.join(with: "")
+}
+
+/// Internal helper used by slot-level `on_input` handlers.
+///
+/// Single-character updates replace only one slot. Multi-character updates
+/// (such as paste events) fan out from the current index across subsequent
+/// slots.
+@internal
+pub fn input_otp_apply_slot_input(
+  chars chars: List(String),
+  index index: Int,
+  input input: String,
+) -> String {
+  let next_chars = string.to_graphemes(input)
+
+  case next_chars {
+    [] -> replace_slot(chars, index, "")
+    [single] -> replace_slot(chars, index, single)
+    many -> replace_slots_from_index(chars, index, many)
+  }
 }
 
 /// Render an input-otp root.
@@ -159,8 +193,7 @@ pub fn input_otp(config config: InputOtpConfig(msg)) -> weft_lustre.Element(msg)
             index: index,
             value: char,
             on_input: fn(input) {
-              let next = first_grapheme_or_empty(input)
-              on_change(replace_slot(chars, index, next))
+              on_change(input_otp_apply_slot_input(chars, index, input))
             },
             disabled: disabled,
             attrs: slot_attrs,
@@ -228,7 +261,6 @@ pub fn input_otp_slot(
     list.flatten([
       [weft_lustre.html_attribute(attribute.type_("text"))],
       [weft_lustre.html_attribute(attribute.inputmode("numeric"))],
-      [weft_lustre.html_attribute(attribute.attribute("maxlength", "1"))],
       [
         weft_lustre.html_attribute(attribute.attribute(
           "data-slot",
