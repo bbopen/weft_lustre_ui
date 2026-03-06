@@ -61,7 +61,7 @@ jobs:
           bash scripts/ci/run_full_checks_with_local_overrides.sh
         working-directory: weft_lustre_ui
       - if: steps.hex_deps.outputs.deps_ready == 'true'
-        run: gleam deps download
+        run: bash scripts/ci/retry.sh 5 3 gleam deps download
         working-directory: weft_lustre_ui
       - if: steps.hex_deps.outputs.deps_ready == 'true'
         run: |
