@@ -30,6 +30,17 @@ pub fn input_otp_tests() {
         string.contains(rendered, "data-index=\"3\"")
         |> expect.to_equal(expected: True)
       }),
+      it("fans pasted values across subsequent slots", fn() {
+        let next =
+          headless_input_otp.input_otp_apply_slot_input(
+            chars: ["0", "", "", ""],
+            index: 1,
+            input: "789",
+          )
+
+        next
+        |> expect.to_equal(expected: "0789")
+      }),
     ]),
     describe("headless rendering", [
       it("renders group/slot/separator slot markers", fn() {
@@ -54,6 +65,9 @@ pub fn input_otp_tests() {
 
         string.contains(rendered, "data-slot=\"input-otp-slot\"")
         |> expect.to_equal(expected: True)
+
+        string.contains(rendered, "maxlength=\"1\"")
+        |> expect.to_equal(expected: False)
 
         string.contains(rendered, "data-slot=\"input-otp-separator\"")
         |> expect.to_equal(expected: True)

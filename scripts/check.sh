@@ -6,6 +6,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT_DIR"
 
 bash scripts/grep-gates.sh
+bash scripts/ci/retry.sh 12 10 gleam deps download
 gleam format --check src test
 gleam build --target erlang --warnings-as-errors
 gleam build --target javascript --warnings-as-errors

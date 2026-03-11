@@ -20,6 +20,15 @@ jobs:
           otp-version: "28"
           gleam-version: "1.14.0"
           rebar3-version: "3"
+      - name: Cache Gleam dependency artifacts
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/gleam
+            weft_lustre_ui/build/packages
+          key: ${{ runner.os }}-gleam-deps-${{ hashFiles('weft_lustre_ui/gleam.toml', 'weft_lustre_ui/manifest.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-gleam-deps-
       - run: sudo apt-get update && sudo apt-get install -y imagemagick
       - id: hex_deps
         name: Check Hex dependency semver availability
@@ -61,7 +70,7 @@ jobs:
           bash scripts/ci/run_full_checks_with_local_overrides.sh
         working-directory: weft_lustre_ui
       - if: steps.hex_deps.outputs.deps_ready == 'true'
-        run: gleam deps download
+        run: bash scripts/ci/retry.sh 12 10 gleam deps download
         working-directory: weft_lustre_ui
       - if: steps.hex_deps.outputs.deps_ready == 'true'
         run: |
